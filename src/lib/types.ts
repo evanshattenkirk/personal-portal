@@ -67,7 +67,12 @@ export interface PortalLink {
   sortOrder: number;
 }
 
-export type SuggestionCategory = "flight" | "food" | "activity" | "stay";
+export type SuggestionCategory =
+  | "planning"
+  | "flight"
+  | "food"
+  | "activity"
+  | "stay";
 
 export type SuggestionStatus = "suggested" | "saved" | "booked" | "dismissed";
 
