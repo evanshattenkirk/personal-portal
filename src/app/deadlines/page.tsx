@@ -3,6 +3,8 @@ import { Card, Chip } from "@/components/ui";
 import { daysUntil, fmtDate, getDeadlines } from "@/lib/data";
 
 
+export const instant = false; // single-user portal: render at request time
+
 export default async function DeadlinesPage() {
   await connection(); // render at request time: countdowns use the current date
   const deadlines = [...(await getDeadlines())].sort((a, b) =>

@@ -2,6 +2,8 @@ import { Card } from "@/components/ui";
 import { getLinks } from "@/lib/data";
 
 
+export const instant = false; // single-user portal: render at request time
+
 export default async function LinksPage() {
   const links = await getLinks();
   const categories = [...new Set(links.map((l) => l.category))];

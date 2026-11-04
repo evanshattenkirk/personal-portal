@@ -4,6 +4,8 @@ import { Card, Chip } from "@/components/ui";
 import { fmtDate, fmtMoney, fmtPoints, getBookings, getTrip } from "@/lib/data";
 
 
+export const instant = false; // single-user portal: render at request time
+
 export default async function TripDetailPage({
   params,
 }: {

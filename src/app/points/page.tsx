@@ -3,6 +3,8 @@ import { fmtDate, fmtPoints, getPoints } from "@/lib/data";
 import { creditTrackers } from "@/lib/seed";
 
 
+export const instant = false; // single-user portal: render at request time
+
 export default async function PointsPage() {
   const points = await getPoints();
   const total = points.reduce((s, p) => s + p.balance, 0);

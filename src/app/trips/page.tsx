@@ -3,6 +3,8 @@ import { Card, Chip } from "@/components/ui";
 import { getBookings, getTrips, fmtMoney } from "@/lib/data";
 
 
+export const instant = false; // single-user portal: render at request time
+
 export default async function TripsPage() {
   const trips = await getTrips();
 
