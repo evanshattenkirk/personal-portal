@@ -4,6 +4,7 @@ import {
   seedDeadlines,
   seedLinks,
   seedPoints,
+  seedSuggestions,
   seedTrips,
 } from "./seed";
 import type {
@@ -11,6 +12,7 @@ import type {
   Deadline,
   PointsBalance,
   PortalLink,
+  Suggestion,
   Trip,
 } from "./types";
 
@@ -126,6 +128,22 @@ function mapLink(r: Record<string, unknown>): PortalLink {
   };
 }
 
+function mapSuggestion(r: Record<string, unknown>): Suggestion {
+  return {
+    id: String(r.id),
+    tripSlug: String(r.trip_slug),
+    category: r.category as Suggestion["category"],
+    title: String(r.title),
+    subtitle: (r.subtitle as string) ?? null,
+    detail: (r.detail as string) ?? null,
+    priceLabel: (r.price_label as string) ?? null,
+    url: (r.url as string) ?? null,
+    source: (r.source as string) ?? null,
+    status: r.status as Suggestion["status"],
+    sortOrder: Number(r.sort_order ?? 0),
+  };
+}
+
 // --- Queries -----------------------------------------------------------------
 // Every query falls back to seed data when Supabase is not configured or a
 // query errors, so the UI never hard-crashes on a missing table.
@@ -195,6 +213,24 @@ export async function getLinks(): Promise<PortalLink[]> {
     .order("sort_order");
   if (error || !data) return seedLinks;
   return data.map(mapLink);
+}
+
+export async function getSuggestions(
+  tripSlug: string,
+): Promise<Suggestion[]> {
+  if (!isSupabaseConfigured()) {
+    return seedSuggestions.filter((s) => s.tripSlug === tripSlug);
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("trip_suggestions")
+    .select("*")
+    .eq("trip_slug", tripSlug)
+    .neq("status", "dismissed")
+    .order("sort_order");
+  // Table may not exist yet (migration 0002 pending): fall back quietly.
+  if (error || !data) return seedSuggestions;
+  return data.map(mapSuggestion);
 }
 
 // --- Formatting helpers ------------------------------------------------------

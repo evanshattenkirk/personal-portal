@@ -67,6 +67,24 @@ export interface PortalLink {
   sortOrder: number;
 }
 
+export type SuggestionCategory = "flight" | "food" | "activity" | "stay";
+
+export type SuggestionStatus = "suggested" | "saved" | "booked" | "dismissed";
+
+export interface Suggestion {
+  id: string;
+  tripSlug: string;
+  category: SuggestionCategory;
+  title: string;
+  subtitle: string | null; // route/times line, or neighborhood + rating
+  detail: string | null; // why this pick, terms, book-ahead warnings
+  priceLabel: string | null; // "$412 for two", "$$", "80,000 pts"
+  url: string | null; // booking / info link
+  source: string | null; // where the pick came from (Duffel, Places, ...)
+  status: SuggestionStatus;
+  sortOrder: number;
+}
+
 export interface CreditTracker {
   id: string;
   name: string;

@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Card, Chip } from "@/components/ui";
-import { fmtDate, fmtMoney, fmtPoints, getBookings, getTrip } from "@/lib/data";
+import {
+  fmtDate,
+  fmtMoney,
+  fmtPoints,
+  getBookings,
+  getSuggestions,
+  getTrip,
+} from "@/lib/data";
+import type { Suggestion, SuggestionCategory } from "@/lib/types";
 
 
 export const instant = false; // single-user portal: render at request time
@@ -15,6 +23,7 @@ export default async function TripDetailPage({
   const trip = await getTrip(slug);
   if (!trip) notFound();
   const bookings = await getBookings(slug);
+  const suggestions = await getSuggestions(slug);
 
   const totalPaid = bookings.reduce((s, b) => s + (b.costPaid ?? 0), 0);
   const totalNet = bookings.reduce((s, b) => s + (b.costNet ?? 0), 0);
@@ -131,6 +140,92 @@ export default async function TripDetailPage({
           </div>
         )}
       </Card>
+
+      {SUGGESTION_SECTIONS.map(({ key, title }) => {
+        const items = suggestions.filter((s) => s.category === key);
+        if (items.length === 0) return null;
+        return (
+          <Card key={key} title={`${title} (${items.length})`}>
+            <ul className="divide-y divide-zinc-800">
+              {items.map((s) => (
+                <SuggestionRow key={s.id} s={s} />
+              ))}
+            </ul>
+          </Card>
+        );
+      })}
+
+      <Card title="Day-by-day itinerary — TREK">
+        <p className="text-sm text-zinc-400">
+          {slug === "seattle" ? (
+            <>
+              This trip is loaded in TREK (the trial instance Muse runs):
+              both hotels, confirmation numbers, and cancellation terms are
+              in its itinerary view. TREK is the day-by-day planner; this
+              page is the summary. The trial is hosted on Muse&apos;s
+              machine for now — a permanent home (VPS or Tailscale) makes it
+              reachable from anywhere.
+            </>
+          ) : (
+            <>
+              This trip isn&apos;t in TREK yet. Ask Muse to load it — TREK
+              holds the day-by-day itinerary while this page keeps the
+              bookings, totals, and picks.
+            </>
+          )}
+        </p>
+      </Card>
     </div>
+  );
+}
+
+const SUGGESTION_SECTIONS: { key: SuggestionCategory; title: string }[] = [
+  { key: "flight", title: "Flights" },
+  { key: "food", title: "Eat & Drink" },
+  { key: "activity", title: "Things to Do" },
+  { key: "stay", title: "Stays" },
+];
+
+function SuggestionRow({ s }: { s: Suggestion }) {
+  return (
+    <li className="py-3 first:pt-0 last:pb-0">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="font-medium">
+          {s.url ? (
+            <a
+              href={s.url}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sky-400 hover:text-sky-300"
+            >
+              {s.title}
+            </a>
+          ) : (
+            s.title
+          )}
+          {s.status === "saved" ? (
+            <span className="ml-2">
+              <Chip label="saved" />
+            </span>
+          ) : null}
+        </div>
+        {s.priceLabel ? (
+          <div className="text-sm whitespace-nowrap text-emerald-300">
+            {s.priceLabel}
+          </div>
+        ) : null}
+      </div>
+      {s.subtitle ? (
+        <div className="mt-0.5 text-xs text-zinc-500">{s.subtitle}</div>
+      ) : null}
+      {s.detail ? (
+        <p className="mt-1 text-sm text-zinc-400">{s.detail}</p>
+      ) : null}
+      {s.source ? (
+        <div className="mt-1 text-[11px] tracking-wide text-zinc-600 uppercase">
+          via {s.source}
+        </div>
+      ) : null}
+    </li>
   );
 }
