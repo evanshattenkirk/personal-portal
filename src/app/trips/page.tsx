@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, Chip } from "@/components/ui";
-import { getBookings, getTrips, fmtMoney } from "@/lib/data";
+import { getBookings, getTrips, fmtMoney, daysUntil } from "@/lib/data";
+import { tripTheme } from "@/lib/trip-theme";
 
 
 export const instant = false; // single-user portal: render at request time
@@ -24,7 +25,12 @@ export default async function TripsPage() {
             <Link key={trip.id} href={`/trips/${trip.slug}`} className="block">
               <Card className="h-full transition-colors hover:border-zinc-600">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-base font-semibold">{trip.name}</h3>
+                  <h3 className="text-base font-semibold">
+                    <span className="mr-1.5" aria-hidden>
+                      {tripTheme(trip.slug).emoji}
+                    </span>
+                    {trip.name}
+                  </h3>
                   <Chip label={trip.status} />
                 </div>
                 <p className="mt-1 text-sm text-zinc-400">
@@ -41,6 +47,11 @@ export default async function TripsPage() {
                   </span>
                   {net > 0 ? <span>Net {fmtMoney(net)}</span> : null}
                   {trip.travelers ? <span>{trip.travelers} travelers</span> : null}
+                  {trip.startDate && daysUntil(trip.startDate) > 0 ? (
+                    <span className="text-sky-300">
+                      ⏳ {daysUntil(trip.startDate)} days to go
+                    </span>
+                  ) : null}
                 </div>
               </Card>
             </Link>
