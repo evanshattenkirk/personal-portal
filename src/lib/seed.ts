@@ -4,6 +4,7 @@ import type {
   Deadline,
   PointsBalance,
   PortalLink,
+  Suggestion,
   Trip,
 } from "./types";
 
@@ -268,3 +269,7 @@ export const creditTrackers: CreditTracker[] = [
       "Used mainly for pickup dinner orders at Resy restaurants, paid with the Platinum.",
   },
 ];
+
+// Suggestions live only in the database (written per trip from live
+// research); demo mode simply shows none until some are added.
+export const seedSuggestions: Suggestion[] = [];
