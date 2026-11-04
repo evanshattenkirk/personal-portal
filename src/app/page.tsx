@@ -13,6 +13,8 @@ import {
   getTrips,
 } from "@/lib/data";
 
+export const instant = false; // single-user portal: render at request time
+
 export default async function DashboardPage() {
   await connection(); // render at request time: countdowns use the current date
   const [trips, points, deadlines, links] = await Promise.all([
