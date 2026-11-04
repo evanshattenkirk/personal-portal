@@ -180,6 +180,7 @@ export default async function TripDetailPage({
 }
 
 const SUGGESTION_SECTIONS: { key: SuggestionCategory; title: string }[] = [
+  { key: "planning", title: "Trip Planning" },
   { key: "flight", title: "Flights" },
   { key: "food", title: "Eat & Drink" },
   { key: "activity", title: "Things to Do" },
