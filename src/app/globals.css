@@ -11,8 +11,12 @@
   --line-strong: #cfcac0;
   --teal: #1f5c55;
   --coral: #c8502a;
-  --sky: #3a6488; /* second accent: dates, countdowns, travel */
-  --sky-soft: #e6edf3;
+  /* Signal accent: one loud color against pine and paper.
+     --accent fills, --accent-ink is text on a fill, --accent-text is the
+     accent used as text or a thin line on paper (kept AA-readable). */
+  --accent: #ff5b1f;
+  --accent-ink: #16181a;
+  --accent-text: #c2410c;
   --sand: #ece8df;
   --hover: #efece6;
   --ok: #2e7d5b;
@@ -204,7 +208,7 @@ svg {
   width: 12px;
   height: 12px;
   border-radius: 2px;
-  background: linear-gradient(135deg, var(--teal) 50%, var(--sky) 50%);
+  background: var(--accent);
 }
 .nav-wrap nav {
   display: flex;
@@ -236,8 +240,8 @@ svg {
   left: var(--s3);
   right: var(--s3);
   bottom: -1px;
-  height: 2px;
-  background: var(--teal);
+  height: 3px;
+  background: var(--accent);
 }
 .profile-dot {
   align-self: center;
@@ -353,6 +357,11 @@ svg {
 .button.secondary:hover {
   background: var(--hover);
   filter: none;
+}
+.button.accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
 }
 .button.ghost {
   background: transparent;
@@ -662,11 +671,18 @@ a.card:hover {
 .hero .readiness + * {
   margin-top: var(--s5);
 }
-.hero-stamp {
+.hero-stamp,
+.trip-when {
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 20px;
   font-weight: 500;
-  color: var(--sky);
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: var(--r-badge);
+  padding: 0 8px;
+}
+.hero-stamp {
   margin-bottom: var(--s3);
 }
 .home-top .section-title {
@@ -805,10 +821,11 @@ a.card:hover {
   font-family: var(--font-mono);
   background: transparent;
   padding: 0;
-  color: var(--sky);
+  color: var(--accent-text);
 }
 .badge.countdown.warning {
-  color: var(--coral);
+  color: var(--danger);
+  font-weight: 600;
 }
 .welcome-date {
   font-family: var(--font-mono);
@@ -823,7 +840,7 @@ a.card:hover {
   flex-direction: column;
   overflow: hidden;
   border: var(--border) solid var(--line);
-  border-top: 3px solid var(--sky);
+  border-top: 3px solid var(--accent);
   border-radius: var(--r-card);
   background: var(--white);
 }
@@ -840,11 +857,8 @@ a.card:hover {
 }
 .trip-when {
   position: absolute;
-  top: 22px;
+  top: 20px;
   right: var(--s5);
-  font-family: var(--font-mono);
-  font-size: var(--meta);
-  color: var(--sky);
 }
 .trip-card-body {
   flex: 1;
@@ -1083,7 +1097,7 @@ a.card:hover {
 }
 .timeline-item {
   position: relative;
-  border-left: 2px solid var(--sky);
+  border-left: 2px solid var(--accent);
   padding: var(--s3) var(--s4);
   background: var(--white);
   border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
@@ -1095,7 +1109,7 @@ a.card:hover {
 }
 .timeline-item .time {
   font-family: var(--font-mono);
-  color: var(--sky);
+  color: var(--accent-text);
   font-size: var(--meta);
   margin-bottom: 2px;
 }
@@ -1119,7 +1133,7 @@ a.card:hover {
 .progress-track span {
   display: block;
   height: 100%;
-  background: var(--sky);
+  background: var(--accent);
 }
 .credit-values {
   display: flex;
@@ -1217,7 +1231,7 @@ a.card:hover {
 .section-title {
   padding-top: var(--s4);
   background:
-    repeating-linear-gradient(90deg, var(--sky) 0 1px, transparent 1px 8px)
+    repeating-linear-gradient(90deg, var(--accent-text) 0 1px, transparent 1px 8px)
       top left / 65px 5px no-repeat,
     linear-gradient(var(--line), var(--line)) top left / 100% 1px no-repeat;
 }

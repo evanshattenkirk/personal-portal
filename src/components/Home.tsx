@@ -59,7 +59,7 @@ export default function Home() {
               : "."}
           </p>
         </div>
-        <button className="button secondary" onClick={() => setAdding(true)}>
+        <button className="button accent" onClick={() => setAdding(true)}>
           <Icon name="plus" size={16} />
           Quick add
         </button>
