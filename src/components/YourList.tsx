@@ -62,11 +62,9 @@ export default function YourList() {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">Your work, in context</span>
-          <h1>Your list.</h1>
+          <h1>Your list</h1>
           <p className="page-intro">
-            The things that need you first. Synced from your Linear board;
-            changes happen in the original issue.
+            What needs you first. Synced from Linear; edit there.
           </p>
         </div>
         <Link className="button secondary" href="/deadlines">

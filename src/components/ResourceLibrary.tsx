@@ -28,11 +28,9 @@ export default function ResourceLibrary() {
     <>
       <div className="page-heading">
         <div>
-          <span className="eyebrow">Everything has a place</span>
-          <h1>Close at hand.</h1>
+          <h1>Library</h1>
           <p className="page-intro">
-            Your projects, useful places, and everyday resources. Ready when you
-            need them.
+            Projects, useful places, and everyday resources.
           </p>
         </div>
         <button
@@ -97,12 +95,12 @@ export default function ResourceLibrary() {
             <div className="card-actions">
               {resourceHref(l, p.ledgers) && (
                 <a
-                  className="button"
+                  className="button secondary"
                   href={resourceHref(l, p.ledgers)!}
                   target={safeURL(l.url) ? "_blank" : undefined}
                   rel="noreferrer"
                 >
-                  {safeURL(l.url) ? "Open resource ↗" : "Open ledger →"}
+                  {safeURL(l.url) ? "Open ↗" : "Open ledger →"}
                 </a>
               )}
               {l.location && (

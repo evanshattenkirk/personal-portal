@@ -43,19 +43,20 @@ export default function Home() {
     <>
       <div className="page-heading">
         <div>
-          <div className="welcome-date">
+          <h1>
             {new Date(todayISO() + "T12:00:00Z").toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
               day: "numeric",
               timeZone: "UTC",
-            })}{" "}
-            · Your personal home base
-          </div>
-          <h1>Good things ahead, Evan.</h1>
+            })}
+          </h1>
           <p className="page-intro">
-            A place for your next adventure. And the little things that get you
-            there.
+            Hi Evan. {trips.length} upcoming{" "}
+            {trips.length === 1 ? "trip" : "trips"}
+            {needsReview.length
+              ? `, ${needsReview.length} ${needsReview.length === 1 ? "reservation" : "reservations"} to verify.`
+              : "."}
           </p>
         </div>
         <button className="button secondary" onClick={() => setAdding(true)}>
@@ -68,10 +69,10 @@ export default function Home() {
           {next ? (
             <>
               <img className="hero-photo" src={cover(next.slug)} alt="" />
-              <div className="hero-stamp">{tripWhen(next)}</div>
               <div className="hero-content">
+                <span className="hero-stamp">{tripWhen(next)}</span>
                 <span className="eyebrow">
-                  On the horizon · {next.travelers ?? "?"} travelers
+                  Next trip · {next.travelers ?? "?"} travelers
                 </span>
                 <h2>{next.name}</h2>
                 <p>
@@ -79,13 +80,12 @@ export default function Home() {
                     "Your options, research, and next steps, all in one place."}
                 </p>
                 <Link className="button" href={`/trips/${next.slug}`}>
-                  Keep planning <Icon name="arrow" size={16} />
+                  Open plan <Icon name="arrow" size={16} />
                 </Link>
               </div>
             </>
           ) : (
             <div className="hero-content">
-              <span className="eyebrow">Your next chapter</span>
               <h2>Where to next?</h2>
               <p>
                 A weekend away, a family adventure, or somewhere you’ve always
@@ -98,11 +98,7 @@ export default function Home() {
           )}
         </section>
         <aside className="home-actions">
-          <span className="eyebrow">A little progress today</span>
-          <h2>Your next moves</h2>
-          <p className="muted" style={{ fontSize: 12 }}>
-            Small steps. More peace of mind.
-          </p>
+          <h2>Next up</h2>
           {needsYou.slice(0, 2).map((t) => (
             <Link
               key={t.id}
@@ -144,7 +140,7 @@ export default function Home() {
               </div>
             ))}
           {tasks.length === 0 && needsYou.length === 0 && (
-            <Empty title="A little breathing room">
+            <Empty title="Nothing waiting">
               No unsnoozed tasks. Your deadlines are below.
             </Empty>
           )}
@@ -158,27 +154,8 @@ export default function Home() {
           </Link>
         </aside>
       </div>
-      <div className="home-strip">
-        <div>
-          <Icon name="plane" size={18} />
-          <strong>
-            {trips.length} upcoming {trips.length === 1 ? "trip" : "trips"}
-          </strong>
-        </div>
-        <div>
-          <Icon name="clock" size={18} />
-          <strong>
-            {needsReview.length} reservation
-            {needsReview.length === 1 ? "" : "s"} to verify
-          </strong>
-        </div>
-        <Link href="/points" className="text-link">
-          Put your points to work <Icon name="arrow" size={15} />
-        </Link>
-      </div>
       <SectionTitle
-        eyebrow="Room for a little adventure"
-        title="Your travel chapters"
+        title="Trips"
         action={
           <Link className="text-link" href="/trips">
             All trips <Icon name="arrow" size={16} />
@@ -193,7 +170,7 @@ export default function Home() {
       <div className="grid-two">
         <section>
           <SectionTitle
-            title="Don’t let these slip"
+            title="Coming up"
             action={
               <Link className="text-link" href="/deadlines">
                 View all
@@ -208,7 +185,7 @@ export default function Home() {
                   <small>{fmtDate(d.dueDate)}</small>
                 </span>
                 <span
-                  className={`badge ${daysUntil(d.dueDate) < 7 ? "warning" : "neutral"}`}
+                  className={`badge countdown ${daysUntil(d.dueDate) < 7 ? "warning" : "neutral"}`}
                 >
                   {daysUntil(d.dueDate) < 0
                     ? "Overdue"
@@ -223,7 +200,7 @@ export default function Home() {
         </section>
         <section>
           <SectionTitle
-            title="Your travel wallet"
+            title="Wallet"
             action={
               <Link className="text-link" href="/points">
                 Open wallet
@@ -239,7 +216,7 @@ export default function Home() {
                     {b.owner} · Checked {fmtDate(b.asOf)}
                   </small>
                 </span>
-                <strong>
+                <strong className="num">
                   {b.approximate ? "~" : ""}
                   {fmtPoints(b.balance)}
                 </strong>
@@ -251,10 +228,10 @@ export default function Home() {
       {pins.length > 0 && (
         <>
           <SectionTitle
-            title="Close at hand"
+            title="Pinned"
             action={
               <Link href="/links" className="text-link">
-                Your library
+                Library
               </Link>
             }
           />
@@ -267,9 +244,9 @@ export default function Home() {
                 target={safeURL(l.url) ? "_blank" : undefined}
                 rel="noreferrer"
               >
-                <span className="eyebrow">{l.category}</span>
+                <span className="meta">{l.category}</span>
                 <h3>{l.name}</h3>
-                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+                <p className="meta">
                   {safeURL(l.url)
                     ? "Open resource ↗"
                     : resourceHref(l, p.ledgers)

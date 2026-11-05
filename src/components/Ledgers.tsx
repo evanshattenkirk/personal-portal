@@ -13,11 +13,9 @@ export default function Ledgers({ slug }: { slug?: string }) {
       <>
         <div className="page-heading">
           <div>
-            <span className="eyebrow">The recorded money picture</span>
-            <h1>Your ledgers.</h1>
+            <h1>Ledgers</h1>
             <p className="page-intro">
-              Reconciled summaries and entries from your existing ledger
-              sources.
+              Reconciled summaries from your ledger sources.
             </p>
           </div>
         </div>
