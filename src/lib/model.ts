@@ -129,3 +129,21 @@ export function addDays(date: string, days: number) {
     .toISOString()
     .slice(0, 10);
 }
+
+export function resourceHref(
+  resource: { name: string; url: string | null; category: string },
+  ledgers: { name: string; slug: string }[],
+) {
+  const url = safeURL(resource.url);
+  if (url) return url;
+  if (resource.category.toLowerCase() !== "ledgers") return null;
+  const normalize = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\bledger\b/g, "")
+      .replace(/[^a-z0-9]/g, "");
+  const ledger = ledgers.find(
+    (l) => normalize(l.name) === normalize(resource.name),
+  );
+  return ledger ? `/ledgers/${encodeURIComponent(ledger.slug)}` : null;
+}

@@ -12,6 +12,7 @@ import {
   fmtPoints,
   daysUntil,
   safeURL,
+  resourceHref,
   bookingStatus,
   tripWhen,
 } from "@/lib/model";
@@ -213,7 +214,7 @@ export default function Home() {
                     ? "Overdue"
                     : daysUntil(d.dueDate) === 0
                       ? "Today"
-                      : `${daysUntil(d.dueDate)} days`}
+                      : `${daysUntil(d.dueDate)} ${daysUntil(d.dueDate) === 1 ? "day" : "days"}`}
                 </span>
               </Link>
             ))}
@@ -262,14 +263,18 @@ export default function Home() {
               <Link
                 key={l.id}
                 className="card"
-                href={safeURL(l.url) ?? "/links"}
+                href={resourceHref(l, p.ledgers) ?? "/links"}
                 target={safeURL(l.url) ? "_blank" : undefined}
                 rel="noreferrer"
               >
                 <span className="eyebrow">{l.category}</span>
                 <h3>{l.name}</h3>
                 <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-                  {l.url ? "Open resource ↗" : "View access instructions"}
+                  {safeURL(l.url)
+                    ? "Open resource ↗"
+                    : resourceHref(l, p.ledgers)
+                      ? "Open ledger →"
+                      : "View access instructions"}
                 </p>
               </Link>
             ))}

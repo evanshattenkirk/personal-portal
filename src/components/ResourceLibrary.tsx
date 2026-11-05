@@ -3,7 +3,7 @@ import { useState } from "react";
 import { usePortal } from "./PortalProvider";
 import { Action, Empty, Icon } from "./Kit";
 import { EntityEditor, newRecord } from "./Editors";
-import { safeURL } from "@/lib/model";
+import { safeURL, resourceHref } from "@/lib/model";
 export default function ResourceLibrary() {
   const p = usePortal();
   const [q, setQ] = useState(""),
@@ -89,20 +89,20 @@ export default function ResourceLibrary() {
                 {l.location}
               </div>
             )}
-            {!safeURL(l.url) && !l.location && (
+            {!resourceHref(l, p.ledgers) && !l.location && (
               <span className="badge warning">
                 Add a location or access instructions
               </span>
             )}
             <div className="card-actions">
-              {safeURL(l.url) && (
+              {resourceHref(l, p.ledgers) && (
                 <a
                   className="button"
-                  href={safeURL(l.url)!}
-                  target="_blank"
+                  href={resourceHref(l, p.ledgers)!}
+                  target={safeURL(l.url) ? "_blank" : undefined}
                   rel="noreferrer"
                 >
-                  Open resource ↗
+                  {safeURL(l.url) ? "Open resource ↗" : "Open ledger →"}
                 </a>
               )}
               {l.location && (

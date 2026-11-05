@@ -158,3 +158,17 @@ test("calendar export escapes injected newlines and excludes removed plans", () 
   assert.match(ics, /LOCATION:A\\,B/);
   assert.ok(!ics.includes("UID:removed"));
 });
+
+test("ledger resources resolve to their existing portal page without guessing external addresses", async () => {
+  const { resourceHref } = await import("../src/lib/model.ts");
+  assert.equal(
+    resourceHref({ name: "Example ledger", url: null, category: "Ledgers" }, [
+      { name: "Example", slug: "example" },
+    ]),
+    "/ledgers/example",
+  );
+  assert.equal(
+    resourceHref({ name: "Missing", url: null, category: "Projects" }, []),
+    null,
+  );
+});
