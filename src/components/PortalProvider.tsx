@@ -36,8 +36,10 @@ export default function PortalProvider({
         if (raw) {
           const saved = JSON.parse(raw);
           if (saved.demo && saved.trips && saved.tasks && saved.scenarios) {
-            current.current = saved;
-            setData(saved);
+            // Older demo saves predate notes and briefs; fill gaps from the fixtures.
+            const merged = { ...initialData, ...saved };
+            current.current = merged;
+            setData(merged);
           }
         }
       } catch {

@@ -100,6 +100,7 @@ export interface Suggestion {
   source: string | null; // where the pick came from (Duffel, Places, ...)
   status: SuggestionStatus;
   sortOrder: number;
+  tags?: string | null; // comma-separated, e.g. "cruise, all-inclusive"
 }
 
 export interface CreditTracker {
@@ -157,6 +158,30 @@ export interface CreditPeriod {
   resetDate: string;
   notes: string | null;
 }
+// Free-form notes Evan writes for his AI assistant to read and act on.
+export interface TripNote {
+  id: string;
+  tripSlug: string;
+  body: string;
+  kind: "note" | "ask_ai" | "preference";
+  status: "open" | "done";
+  aiReply: string | null; // what the AI did or answered, pasted back
+  createdAt: string | null; // ISO timestamp
+}
+// One per trip: what the trip should feel like, so brainstorming stays on target.
+export interface TripBrief {
+  id: string;
+  tripSlug: string;
+  window: string | null; // "Mid April 2027"
+  nights: string | null; // "4-5"
+  styles: string | null; // comma-separated trip styles to explore
+  vibes: string | null; // comma-separated things we want
+  avoid: string | null; // comma-separated things to skip
+  budget: string | null;
+  origin: string | null; // where everyone leaves from
+  who: string | null; // who's coming
+  mustHaves: string | null;
+}
 export interface EntityMap {
   trips: Trip;
   bookings: Booking;
@@ -168,11 +193,15 @@ export interface EntityMap {
   scenarios: Scenario;
   itinerary: ItineraryItem;
   credits: CreditPeriod;
+  notes: TripNote;
+  briefs: TripBrief;
 }
 export type EntityName = keyof EntityMap;
 export type PortalData = { [K in EntityName]: EntityMap[K][] } & {
   demo: boolean;
   trekUrl?: string | null;
+  // False when the brainstorm migration (0007) hasn't been run yet.
+  brainstormReady?: boolean;
   ledgers: Ledger[];
   ledgerEntries: LedgerEntry[];
   externalTasks: PortalTask[];

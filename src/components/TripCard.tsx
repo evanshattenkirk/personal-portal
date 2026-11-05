@@ -11,6 +11,12 @@ export function TripCard({ trip }: { trip: Trip }) {
   const tasks = p.tasks.filter(
     (t) => t.tripSlug === trip.slug && t.status !== "done",
   );
+  const openNotes = p.notes.filter(
+      (n) => n.tripSlug === trip.slug && n.status === "open",
+    ).length,
+    shortlisted = p.suggestions.filter(
+      (s) => s.tripSlug === trip.slug && s.status === "saved",
+    ).length;
   return (
     <Link href={`/trips/${trip.slug}`} className="trip-card">
       <div className="trip-image">
@@ -39,9 +45,15 @@ export function TripCard({ trip }: { trip: Trip }) {
         </div>
         <div className="trip-card-footer">
           <span>
-            {tasks.length
-              ? `${tasks.length} next ${tasks.length === 1 ? "step" : "steps"}`
-              : "Open your plans"}
+            {[
+              tasks.length &&
+                `${tasks.length} next ${tasks.length === 1 ? "step" : "steps"}`,
+              shortlisted && `${shortlisted} shortlisted`,
+              openNotes &&
+                `${openNotes} AI ${openNotes === 1 ? "note" : "notes"}`,
+            ]
+              .filter(Boolean)
+              .join(" · ") || "Open your plans"}
           </span>
           <Icon name="arrow" size={17} />
         </div>

@@ -91,5 +91,32 @@ export function demoData(): PortalData {
     ],
     itinerary: [],
     credits: [],
+    brainstormReady: true,
+    briefs: [
+      {
+        id: "brief-kyoto",
+        tripSlug: "kyoto",
+        window: "Mid October",
+        nights: "4-5",
+        styles: "City stay, Ryokan",
+        vibes: "Food, Gardens, Slow mornings",
+        avoid: "Long drives",
+        budget: null,
+        origin: null,
+        who: "Fictional sample travelers",
+        mustHaves: null,
+      },
+    ],
+    notes: [
+      {
+        id: "demo-note",
+        tripSlug: "kyoto",
+        body: "Fictional sample: find two dinner spots near the stay that take reservations.",
+        kind: "ask_ai",
+        status: "open",
+        aiReply: null,
+        createdAt: "2026-11-01T12:00:00.000Z",
+      },
+    ],
   };
 }

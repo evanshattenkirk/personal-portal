@@ -10,7 +10,11 @@ export const tables: Record<EntityName, string> = {
   scenarios: "trip_scenarios",
   itinerary: "itinerary_items",
   credits: "credit_periods",
+  notes: "trip_notes",
+  briefs: "trip_briefs",
 };
+// Added by migration 0007. Reads tolerate them missing so the portal keeps working.
+export const optionalTables: EntityName[] = ["notes", "briefs"];
 export const fields: Record<EntityName, string[]> = {
   trips:
     "id slug name destination startDate endDate dateLabel status travelers notes sortOrder selectedScenarioId".split(
@@ -21,7 +25,7 @@ export const fields: Record<EntityName, string[]> = {
       " ",
     ),
   suggestions:
-    "id tripSlug category title subtitle detail priceLabel url source status sortOrder scenarioId itemType verification checkedAt".split(
+    "id tripSlug category title subtitle detail priceLabel url source status sortOrder scenarioId itemType verification checkedAt tags".split(
       " ",
     ),
   deadlines:
@@ -45,6 +49,11 @@ export const fields: Record<EntityName, string[]> = {
       " ",
     ),
   credits: "id name period limit used posted resetDate notes".split(" "),
+  notes: "id tripSlug body kind status aiReply createdAt".split(" "),
+  briefs:
+    "id tripSlug window nights styles vibes avoid budget origin who mustHaves".split(
+      " ",
+    ),
 };
 export const snake = (s: string) =>
   s.replace(/[A-Z]/g, (m) => "_" + m.toLowerCase());
@@ -84,6 +93,7 @@ const choices: Partial<Record<EntityName, Record<string, string[]>>> = {
     availability: ["modeled", "needs_recheck", "checked"],
   },
   itinerary: { kind: ["plan", "reservation"], status: ["planned", "removed"] },
+  notes: { kind: ["note", "ask_ai", "preference"], status: ["open", "done"] },
 };
 const required: Record<EntityName, string[]> = {
   trips: ["slug", "name", "destination", "dateLabel", "status"],
@@ -104,6 +114,8 @@ const required: Record<EntityName, string[]> = {
   scenarios: ["tripSlug", "title", "destination", "status", "availability"],
   itinerary: ["tripSlug", "date", "title", "kind", "status"],
   credits: ["name", "period", "resetDate"],
+  notes: ["tripSlug", "body", "kind", "status"],
+  briefs: ["tripSlug"],
 };
 export function validateRecord<K extends EntityName>(
   entity: K,
