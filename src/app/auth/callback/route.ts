@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { isOwnerEmail } from "@/lib/owner";
 
-// Magic-link callback: exchanges the code for a session cookie, then
-// redirects to the page the user originally asked for.
+// Sign-in callback for Google and email links: exchanges the code for a
+// session cookie, refuses anyone but the owner, then redirects to the page
+// the user originally asked for.
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
@@ -17,8 +19,12 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      if (!isOwnerEmail(data.user?.email)) {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(`${origin}/login?error=not-owner`);
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

@@ -57,6 +57,13 @@ export default function Nav({ demo = false }: { demo?: boolean }) {
         >
           {demo ? "D" : "E"}
         </span>
+        {!demo && path !== "/login" && (
+          <form action="/auth/signout" method="post" className="signout">
+            <button type="submit" className="button ghost small">
+              Sign out
+            </button>
+          </form>
+        )}
       </div>
       {demo && (
         <div className="demo-banner">

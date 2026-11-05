@@ -4,25 +4,54 @@ import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+const errors: Record<string, string> = {
+  "not-owner":
+    "That account isn’t allowed into this portal. Sign in with the owner’s Google account.",
+  auth: "Sign-in didn’t finish. Please try again.",
+};
+
+function callbackUrl(next: string) {
+  return `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+}
+
 function LoginForm() {
   const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/";
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(
+    errors[searchParams.get("error") ?? ""] ?? null,
+  );
+  const [busy, setBusy] = useState<"google" | "email" | null>(null);
+  const signedOut = searchParams.get("signed-out") === "1";
+
+  async function onGoogle() {
+    setBusy("google");
+    setError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: callbackUrl(next),
+        queryParams: { prompt: "select_account" },
+      },
+    });
+    if (error) {
+      setBusy(null);
+      setError(error.message);
+    }
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
+    setBusy("email");
     setError(null);
     const supabase = createClient();
-    const next = searchParams.get("next") ?? "/";
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
+      options: { emailRedirectTo: callbackUrl(next), shouldCreateUser: false },
     });
-    setBusy(false);
+    setBusy(null);
     if (error) {
       setError(error.message);
     } else {
@@ -34,9 +63,27 @@ function LoginForm() {
     <section className="card" style={{ maxWidth: 460, margin: "60px auto" }}>
       <span className="eyebrow">Your personal portal</span>
       <h1>Welcome back.</h1>
-      <p className="page-intro">
-        Sign in with your email to pick up your plans.
-      </p>
+      <p className="page-intro">Sign in to pick up your plans.</p>
+      {signedOut && !error && (
+        <p className="notice" style={{ marginTop: 24 }}>
+          You’re signed out.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="notice danger" style={{ marginTop: 24 }}>
+          {error}
+        </p>
+      )}
+      <div className="stack" style={{ marginTop: 24 }}>
+        <button
+          type="button"
+          className="button"
+          onClick={onGoogle}
+          disabled={busy !== null}
+        >
+          {busy === "google" ? "Opening Google…" : "Continue with Google"}
+        </button>
+      </div>
       {sent ? (
         <p className="notice" style={{ marginTop: 24 }}>
           Check your inbox for a one-time sign-in link.
@@ -44,7 +91,7 @@ function LoginForm() {
       ) : (
         <form onSubmit={onSubmit} className="stack" style={{ marginTop: 24 }}>
           <label className="field">
-            Email address
+            Or get an email link
             <input
               type="email"
               required
@@ -54,13 +101,8 @@ function LoginForm() {
               placeholder="you@example.com"
             />
           </label>
-          {error && (
-            <p role="alert" className="notice danger">
-              {error}
-            </p>
-          )}
-          <button className="button" disabled={busy}>
-            {busy ? "Sending…" : "Send sign-in link"}
+          <button className="button secondary" disabled={busy !== null}>
+            {busy === "email" ? "Sending…" : "Send sign-in link"}
           </button>
         </form>
       )}

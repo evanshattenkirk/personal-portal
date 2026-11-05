@@ -43,7 +43,7 @@ Destination cover photographs are bundled from Unsplash (`photo-1507525428034-b7
 
 ## Public code and the latest portal additions
 
-Real trips, balances, confirmations, and deadlines live only in Supabase. All bundled demo records are fictional. The login form has `shouldCreateUser: false`; preserve disabled signups in Supabase Auth. Set the server-only `PORTAL_OWNER_EMAIL` allowlist. The proxy, data loader, and every write action enforce it when configured. Authentication callbacks only accept safe same-origin redirects.
+Real trips, balances, confirmations, and deadlines live only in Supabase. All bundled demo records are fictional. The login form has `shouldCreateUser: false`; preserve disabled signups in Supabase Auth. Set the server-only `PORTAL_OWNER_EMAIL` allowlist (one address or a comma-separated list). The proxy, auth callback, data loader, and every write action enforce it, and they fail closed: with it unset, nobody gets in. Sign-in is Google (Supabase Auth Google provider) with the email link as a fallback. Migration `0006_owner_only_signups.sql` blocks any new Supabase user except the owner, so other Google accounts can't create one. Authentication callbacks only accept safe same-origin redirects.
 
 The existing Ledgers (`/ledgers`) and Linear-backed Your List (`/todo`) are retained. These are read-only mirrors of their existing sources; the redesign never marks a Linear issue completed locally. Your own trip actions are separate records, shown alongside this work on Home. Ledger totals remain the recorded reconciled figures, without assuming that itemized entries are complete.
 
