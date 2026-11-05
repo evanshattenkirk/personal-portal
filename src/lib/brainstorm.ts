@@ -103,10 +103,12 @@ export function buildAIBrief({
     trip.notes?.trim() ? `- Trip notes: ${trip.notes.trim()}` : null,
     "",
   );
-  const open = notes.filter(
+  // Only Evan's own notes are instructions; assistant replies are context.
+  const mine = notes.filter((n) => (n.author ?? "evan") === "evan");
+  const open = mine.filter(
     (n) => n.status === "open" && n.kind !== "preference",
   );
-  const prefs = notes.filter(
+  const prefs = mine.filter(
     (n) => n.status === "open" && n.kind === "preference",
   );
   if (open.length) {

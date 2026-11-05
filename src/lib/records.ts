@@ -12,9 +12,19 @@ export const tables: Record<EntityName, string> = {
   credits: "credit_periods",
   notes: "trip_notes",
   briefs: "trip_briefs",
+  proposals: "trip_proposals",
 };
-// Added by migration 0007. Reads tolerate them missing so the portal keeps working.
-export const optionalTables: EntityName[] = ["notes", "briefs"];
+// Added by migrations 0007/0008. Reads tolerate them missing so the portal keeps working.
+export const optionalTables: EntityName[] = ["notes", "briefs", "proposals"];
+// Screenshot attachments are private storage paths: <user id>/<trip>/<file>.
+export const attachmentBucket = "trip-notes";
+export const attachmentPattern =
+  /^[0-9a-f-]{36}\/[a-z0-9]+(?:-[a-z0-9]+)*\/[A-Za-z0-9._-]{1,120}$/;
+export const splitAttachments = (value?: string | null) =>
+  (value ?? "")
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean);
 export const fields: Record<EntityName, string[]> = {
   trips:
     "id slug name destination startDate endDate dateLabel status travelers notes sortOrder selectedScenarioId".split(
@@ -49,7 +59,14 @@ export const fields: Record<EntityName, string[]> = {
       " ",
     ),
   credits: "id name period limit used posted resetDate notes".split(" "),
-  notes: "id tripSlug body kind status aiReply createdAt".split(" "),
+  notes:
+    "id tripSlug body kind status aiReply createdAt author attachments source".split(
+      " ",
+    ),
+  proposals:
+    "id tripSlug title body kind changes status author url createdAt decidedAt feedback".split(
+      " ",
+    ),
   briefs:
     "id tripSlug window nights styles vibes avoid budget origin who mustHaves".split(
       " ",
@@ -94,6 +111,18 @@ const choices: Partial<Record<EntityName, Record<string, string[]>>> = {
   },
   itinerary: { kind: ["plan", "reservation"], status: ["planned", "removed"] },
   notes: { kind: ["note", "ask_ai", "preference"], status: ["open", "done"] },
+  proposals: {
+    kind: [
+      "plan_change",
+      "idea",
+      "event",
+      "deal",
+      "price_drop",
+      "bonus",
+      "info",
+    ],
+    status: ["pending", "accepted", "rejected"],
+  },
 };
 const required: Record<EntityName, string[]> = {
   trips: ["slug", "name", "destination", "dateLabel", "status"],
@@ -116,6 +145,7 @@ const required: Record<EntityName, string[]> = {
   credits: ["name", "period", "resetDate"],
   notes: ["tripSlug", "body", "kind", "status"],
   briefs: ["tripSlug"],
+  proposals: ["title", "kind", "status"],
 };
 export function validateRecord<K extends EntityName>(
   entity: K,
@@ -253,6 +283,15 @@ export function validateRecord<K extends EntityName>(
     (Number(r.posted) > Number(r.used) || Number(r.used) > Number(r.limit))
   )
     throw new Error("Amounts must satisfy posted ≤ used ≤ allowance.");
+  if (entity === "notes") {
+    const paths = splitAttachments(r.attachments as string | null);
+    if (paths.length > 8)
+      throw new Error("Attach up to 8 screenshots per note.");
+    if (paths.some((path) => !attachmentPattern.test(path)))
+      throw new Error("Invalid attachment.");
+    if (r.author != null && !/^[a-z][a-z0-9 _-]{0,30}$/i.test(String(r.author)))
+      throw new Error("Invalid author.");
+  }
   if (
     entity === "itinerary" &&
     r.time &&

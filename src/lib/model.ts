@@ -111,6 +111,7 @@ export function emptyData(demo = false): PortalData {
     credits: [],
     notes: [],
     briefs: [],
+    proposals: [],
     ledgers: [],
     ledgerEntries: [],
     externalTasks: [],

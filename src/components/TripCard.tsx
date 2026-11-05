@@ -12,7 +12,13 @@ export function TripCard({ trip }: { trip: Trip }) {
     (t) => t.tripSlug === trip.slug && t.status !== "done",
   );
   const openNotes = p.notes.filter(
-      (n) => n.tripSlug === trip.slug && n.status === "open",
+      (n) =>
+        n.tripSlug === trip.slug &&
+        n.status === "open" &&
+        (n.author ?? "evan") !== "evan",
+    ).length,
+    toConfirm = p.proposals.filter(
+      (x) => x.tripSlug === trip.slug && x.status === "pending",
     ).length,
     shortlisted = p.suggestions.filter(
       (s) => s.tripSlug === trip.slug && s.status === "saved",
@@ -50,7 +56,8 @@ export function TripCard({ trip }: { trip: Trip }) {
                 `${tasks.length} next ${tasks.length === 1 ? "step" : "steps"}`,
               shortlisted && `${shortlisted} shortlisted`,
               openNotes &&
-                `${openNotes} AI ${openNotes === 1 ? "note" : "notes"}`,
+                `${openNotes} new AI ${openNotes === 1 ? "reply" : "replies"}`,
+              toConfirm && `${toConfirm} to confirm`,
             ]
               .filter(Boolean)
               .join(" · ") || "Open your plans"}

@@ -42,7 +42,12 @@ export async function proxy(request: NextRequest) {
   const isOwner = !!user && isOwnerEmail(user.email);
 
   const { pathname } = request.nextUrl;
-  const isPublic = pathname === "/login" || pathname.startsWith("/auth/");
+  // /api/agent/* is for assistants: those routes check PORTAL_AGENT_TOKEN
+  // themselves and never use a browser session.
+  const isPublic =
+    pathname === "/login" ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/api/agent/");
 
   if (!isOwner && !isPublic) {
     const loginUrl = request.nextUrl.clone();
