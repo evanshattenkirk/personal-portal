@@ -1606,6 +1606,10 @@ a.card:hover {
   .hero-content {
     grid-row: 2;
   }
+  :root[data-direction="a"] .hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
   :root[data-direction="a"] .hero-content {
     grid-column: 1;
     padding: var(--s4) 0 0;
@@ -1674,18 +1678,26 @@ a.card:hover {
     max-width: none;
     padding: 0;
   }
-  .hero {
+  /* :root[data-direction] matches each direction's own hero rules in
+     specificity, and these come later, so print always wins. */
+  :root[data-direction] .hero {
     display: block;
     min-height: 0;
     border: 0;
     background: var(--white);
   }
-  .hero-photo,
-  .hero::before {
+  :root[data-direction] .hero-photo,
+  :root[data-direction] .hero::before {
     display: none;
   }
-  .hero-content {
+  :root[data-direction] .hero-content {
     position: static;
+    padding: 0;
+    color: var(--ink);
+  }
+  :root[data-direction] .hero p,
+  :root[data-direction] .hero .eyebrow,
+  :root[data-direction] .hero-stamp {
     color: var(--ink);
   }
   .card,
