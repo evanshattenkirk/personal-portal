@@ -90,6 +90,48 @@ export interface Suggestion {
   sortOrder: number;
 }
 
+export interface Ledger {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string | null;
+  totalIn: number | null;
+  totalOut: number | null;
+  net: number | null;
+  netLabel: string | null;
+  balanceLabel: string | null;
+  balanceValue: number | null;
+  entriesCount: number | null;
+  asOf: string | null;
+  summary: string | null;
+  sortOrder: number;
+}
+
+export interface LedgerEntry {
+  id: string;
+  ledgerSlug: string;
+  entryDate: string; // ISO date
+  direction: "in" | "out";
+  amount: number;
+  fee: number | null;
+  note: string | null;
+  sortOrder: number;
+}
+
+export interface PortalTask {
+  id: string;
+  externalId: string; // e.g. KIR-6
+  title: string;
+  status: string; // Linear status name, e.g. "In Progress"
+  statusType: string | null;
+  ownerLabel: string | null; // owner:evan / owner:muse / owner:claude
+  needsEvan: boolean;
+  actionNote: string | null; // what Evan personally has to do
+  dueDate: string | null;
+  url: string | null;
+  sortOrder: number;
+}
+
 export interface CreditTracker {
   id: string;
   name: string;

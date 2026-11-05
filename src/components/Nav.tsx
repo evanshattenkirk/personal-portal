@@ -6,6 +6,8 @@ const items = [
   { href: "/trips", label: "Trips" },
   { href: "/points", label: "Points" },
   { href: "/deadlines", label: "Deadlines" },
+  { href: "/todo", label: "To-Do" },
+  { href: "/ledgers", label: "Ledgers" },
   { href: "/links", label: "Links" },
 ];
 
