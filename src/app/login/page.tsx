@@ -25,23 +25,6 @@ function LoginForm() {
   const [busy, setBusy] = useState<"google" | "email" | null>(null);
   const signedOut = searchParams.get("signed-out") === "1";
 
-  async function onGoogle() {
-    setBusy("google");
-    setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callbackUrl(next),
-        queryParams: { prompt: "select_account" },
-      },
-    });
-    if (error) {
-      setBusy(null);
-      setError(error.message);
-    }
-  }
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setBusy("email");
@@ -75,14 +58,15 @@ function LoginForm() {
         </p>
       )}
       <div className="stack" style={{ marginTop: 24 }}>
-        <button
-          type="button"
+        {/* A full page load: /auth/google is a route handler that redirects to Google. */}
+        <a
           className="button"
-          onClick={onGoogle}
-          disabled={busy !== null}
+          href={`/auth/google?next=${encodeURIComponent(next)}`}
+          onClick={() => setBusy("google")}
+          aria-disabled={busy !== null}
         >
           {busy === "google" ? "Opening Google…" : "Continue with Google"}
-        </button>
+        </a>
       </div>
       {sent ? (
         <p className="notice" style={{ marginTop: 24 }}>
