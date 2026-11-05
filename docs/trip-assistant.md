@@ -21,10 +21,11 @@ Authorization: Bearer $PORTAL_AGENT_TOKEN
 | Method | Path | What it does |
 | --- | --- | --- |
 | GET | `/api/agent/inbox` | Every active trip with its brief, open notes (with screenshot links), recent conversation, proposals, ideas, itinerary and bookings, plus the points and credits wallet. |
+| GET | `/api/agent/screenshot?path=…` | One screenshot from a note. The inbox gives each screenshot's `url` as this path. |
 | POST | `/api/agent/post` | Your chat replies, your proposals, and which of Evan's notes you handled. |
 
-Base URL: the portal's live address (ask Evan; it's on Vercel). Screenshot
-links in the inbox are signed and last 6 hours, so download them during the run.
+Base URL: `https://personal-portal-blond.vercel.app`. Screenshot `url`s in the
+inbox are relative: prefix the base URL and send the same token.
 
 If you can't reach the portal over HTTPS but you do have the portal's Supabase
 project connected, you can read and write the same tables directly (see

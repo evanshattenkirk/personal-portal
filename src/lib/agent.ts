@@ -4,6 +4,7 @@ import { timingSafeEqual } from "node:crypto";
 import { ownerEmails } from "./owner";
 import {
   attachmentBucket,
+  attachmentPattern,
   fromRow,
   splitAttachments,
   tables,
@@ -104,15 +105,6 @@ export async function agentInbox() {
     rows(db, uid, "points"),
     rows(db, uid, "credits"),
   ]);
-  const paths = notes.flatMap((n) => splitAttachments(n.attachments));
-  const signed = new Map<string, string>();
-  if (paths.length) {
-    const { data } = await db.storage
-      .from(attachmentBucket)
-      .createSignedUrls(paths, 60 * 60 * 6);
-    for (const s of data ?? [])
-      if (s.signedUrl && s.path) signed.set(s.path, s.signedUrl);
-  }
   const byTrip = <T extends { tripSlug?: string | null }>(
     list: T[],
     slug: string,
@@ -134,9 +126,10 @@ export async function agentInbox() {
           .filter((n) => n.status === "open" && (n.author ?? "evan") === "evan")
           .map((n) => ({
             ...n,
+            // Fetch each with GET /api/agent/screenshot?path=… and the same token.
             screenshots: splitAttachments(n.attachments).map((p) => ({
               path: p,
-              url: signed.get(p) ?? null,
+              url: `/api/agent/screenshot?path=${encodeURIComponent(p)}`,
             })),
           })),
         // The last 30 messages either way, so replies read like a conversation.
@@ -195,6 +188,19 @@ export async function agentInbox() {
       (p) => !p.tripSlug && p.status === "pending",
     ),
   };
+}
+
+/** One screenshot attached to one of the owner's notes. */
+export async function agentScreenshot(path: string) {
+  if (!attachmentPattern.test(path)) throw new AgentError("Invalid path.");
+  const db = serviceClient();
+  const uid = await ownerId(db);
+  if (!path.startsWith(`${uid}/`)) throw new AgentError("Not found.", 404);
+  const { data, error } = await db.storage
+    .from(attachmentBucket)
+    .download(path);
+  if (error || !data) throw new AgentError("Not found.", 404);
+  return data;
 }
 
 const str = (v: unknown, max: number) =>
