@@ -312,7 +312,10 @@ export async function getLedgers(): Promise<Ledger[]> {
     .from("ledgers")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedLedgers;
+  if (error || !data) {
+    liveError("ledgers", error);
+    return [];
+  }
   return data.map(mapLedger);
 }
 
@@ -335,7 +338,8 @@ export async function getLedgerEntries(
     .order("entry_date", { ascending: false })
     .order("sort_order", { ascending: false });
   if (error || !data) {
-    return seedLedgerEntries.filter((e) => e.ledgerSlug === ledgerSlug);
+    liveError("ledger_entries", error);
+    return [];
   }
   return data.map(mapLedgerEntry);
 }
@@ -347,7 +351,10 @@ export async function getTasks(): Promise<PortalTask[]> {
     .from("tasks")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedTasks;
+  if (error || !data) {
+    liveError("tasks", error);
+    return [];
+  }
   return data.map(mapTask);
 }
 

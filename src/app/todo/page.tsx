@@ -1,4 +1,5 @@
 import { Card } from "@/components/ui";
+import { connection } from "next/server";
 import { daysUntil, fmtDate, getTasks } from "@/lib/data";
 import type { PortalTask } from "@/lib/types";
 
@@ -72,6 +73,7 @@ function TaskRow({ t, highlight }: { t: PortalTask; highlight?: boolean }) {
 }
 
 export default async function TodoPage() {
+  await connection(); // render at request time: due-date countdowns use the current date
   const tasks = await getTasks();
   const needsYou = tasks.filter((t) => t.needsEvan);
   const agentsOnIt = tasks.filter((t) => !t.needsEvan);
