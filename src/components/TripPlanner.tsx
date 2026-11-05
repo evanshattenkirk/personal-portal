@@ -271,7 +271,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
           <div className="readiness">
             {readiness.map((r) => (
               <span
-                className={`badge ${r.status === "Confirmed" ? "success" : r.status === "Not recorded" ? "neutral" : "warning"}`}
+                className={`badge ${r.status === "Confirmed" ? "success" : "warning"}`}
                 key={r.kind}
               >
                 {r.label}: {r.status}

@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Icon } from "./Kit";
 import { BRAND } from "./brand";
+import { Icon } from "./Kit";
 const items = [
   ["/", "Home", "home"],
   ["/trips", "Trips", "plane"],

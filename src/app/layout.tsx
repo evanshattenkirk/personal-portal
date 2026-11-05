@@ -1,23 +1,9 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import Nav from "@/components/Nav";
 import { BRAND } from "@/components/brand";
 import { isDemoMode } from "@/lib/data";
 import "./globals.css";
-
-const archivo = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
-  variable: "--f-archivo",
-  display: "swap",
-});
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--f-plex-mono",
-  display: "swap",
-});
 export const metadata: Metadata = {
   title: { default: BRAND, template: `%s · ${BRAND}` },
   description:
@@ -29,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${archivo.variable} ${plexMono.variable}`}>
+    <html lang="en">
       <body>
         <a href="#main" className="skip-link">
           Skip to content
@@ -48,8 +34,7 @@ export default function RootLayout({
         </main>
         <footer className="site-footer">
           <span>
-            <b>{BRAND.toUpperCase()}</b> · A little more life, a little less
-            admin.
+            <b>{BRAND.toUpperCase()}</b> · A little more life, a little less admin.
           </span>
           <span>Private by design · Times in Chicago unless noted</span>
         </footer>

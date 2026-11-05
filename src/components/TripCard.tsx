@@ -30,7 +30,7 @@ export function TripCard({ trip }: { trip: Trip }) {
             .slice(0, 2)
             .map((r) => (
               <span
-                className={`badge ${r.status === "Confirmed" ? "success" : r.status === "Not recorded" ? "neutral" : "warning"}`}
+                className={`badge ${r.status === "Confirmed" ? "success" : "warning"}`}
                 key={r.kind}
               >
                 {r.label} · {r.status}

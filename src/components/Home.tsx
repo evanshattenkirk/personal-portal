@@ -58,12 +58,45 @@ export default function Home() {
             there.
           </p>
         </div>
-        <button className="button accent" onClick={() => setAdding(true)}>
+        <button className="button secondary" onClick={() => setAdding(true)}>
           <Icon name="plus" size={16} />
           Quick add
         </button>
       </div>
-      <div className="grid-two home-first">
+      <div className="home-grid">
+        <section className="hero">
+          {next ? (
+            <>
+              <img className="hero-photo" src={cover(next.slug)} alt="" />
+              <div className="hero-stamp">{tripWhen(next)}</div>
+              <div className="hero-content">
+                <span className="eyebrow">
+                  On the horizon · {next.travelers ?? "?"} travelers
+                </span>
+                <h2>{next.name}</h2>
+                <p>
+                  {next.notes ??
+                    "Your options, research, and next steps, all in one place."}
+                </p>
+                <Link className="button" href={`/trips/${next.slug}`}>
+                  Keep planning <Icon name="arrow" size={16} />
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="hero-content">
+              <span className="eyebrow">Your next chapter</span>
+              <h2>Where to next?</h2>
+              <p>
+                A weekend away, a family adventure, or somewhere you’ve always
+                wanted to go.
+              </p>
+              <Link className="button" href="/trips">
+                Plan a trip <Icon name="arrow" size={16} />
+              </Link>
+            </div>
+          )}
+        </section>
         <aside className="home-actions">
           <span className="eyebrow">A little progress today</span>
           <h2>Your next moves</h2>
@@ -112,7 +145,7 @@ export default function Home() {
             ))}
           {tasks.length === 0 && needsYou.length === 0 && (
             <Empty title="A little breathing room">
-              No open actions right now.
+              No unsnoozed tasks. Your deadlines are below.
             </Empty>
           )}
           {needsYou.length > 0 && (
@@ -121,90 +154,9 @@ export default function Home() {
             </Link>
           )}
           <Link href="/deadlines" className="text-link">
-            All actions <Icon name="arrow" size={15} />
+            All actions & deadlines <Icon name="arrow" size={15} />
           </Link>
         </aside>
-        <aside className="home-actions coming">
-          <span className="eyebrow">Don’t let these slip</span>
-          <h2>Coming up</h2>
-          {deadlines.slice(0, 4).map((d) => (
-            <Link href="/deadlines" className="mini-row" key={d.id}>
-              <span>
-                <strong>{d.title}</strong>
-                <small>{fmtDate(d.dueDate)}</small>
-              </span>
-              <span
-                className={`badge ${daysUntil(d.dueDate) < 7 ? "warning" : "neutral"}`}
-              >
-                {daysUntil(d.dueDate) < 0
-                  ? "Overdue"
-                  : daysUntil(d.dueDate) === 0
-                    ? "Today"
-                    : `${daysUntil(d.dueDate)} ${daysUntil(d.dueDate) === 1 ? "day" : "days"}`}
-              </span>
-            </Link>
-          ))}
-          {!deadlines.length && <Empty title="No deadlines recorded" />}
-          <Link href="/deadlines" className="text-link">
-            View all deadlines <Icon name="arrow" size={15} />
-          </Link>
-        </aside>
-      </div>
-      <div className="home-grid">
-        <section className="hero">
-          {next ? (
-            <>
-              <img className="hero-photo" src={cover(next.slug)} alt="" />
-              <div className="hero-stamp">{tripWhen(next)}</div>
-              <div className="hero-content">
-                <span className="eyebrow">
-                  On the horizon · {next.travelers ?? "?"} travelers
-                </span>
-                <h2>{next.name}</h2>
-                <p>
-                  {next.notes ??
-                    "Your options, research, and next steps, all in one place."}
-                </p>
-                <Link className="button" href={`/trips/${next.slug}`}>
-                  Keep planning <Icon name="arrow" size={16} />
-                </Link>
-              </div>
-            </>
-          ) : (
-            <div className="hero-content">
-              <span className="eyebrow">Your next chapter</span>
-              <h2>Where to next?</h2>
-              <p>
-                A weekend away, a family adventure, or somewhere you’ve always
-                wanted to go.
-              </p>
-              <Link className="button" href="/trips">
-                Plan a trip <Icon name="arrow" size={16} />
-              </Link>
-            </div>
-          )}
-        </section>
-        <section className="card wallet-panel">
-          <span className="eyebrow">Points & miles</span>
-          <h2>Your travel wallet</h2>
-          {p.points.slice(0, 4).map((b) => (
-            <Link href="/points" className="mini-row" key={b.id}>
-              <span>
-                <strong>{b.program}</strong>
-                <small>
-                  {b.owner} · Checked {fmtDate(b.asOf)}
-                </small>
-              </span>
-              <strong>
-                {b.approximate ? "~" : ""}
-                {fmtPoints(b.balance)}
-              </strong>
-            </Link>
-          ))}
-          <Link href="/points" className="text-link">
-            Open wallet <Icon name="arrow" size={15} />
-          </Link>
-        </section>
       </div>
       <div className="home-strip">
         <div>
@@ -237,6 +189,64 @@ export default function Home() {
         {trips.slice(0, 3).map((t) => (
           <TripCard key={t.id} trip={t} />
         ))}
+      </div>
+      <div className="grid-two">
+        <section>
+          <SectionTitle
+            title="Don’t let these slip"
+            action={
+              <Link className="text-link" href="/deadlines">
+                View all
+              </Link>
+            }
+          />
+          <div className="card mini-list">
+            {deadlines.slice(0, 4).map((d) => (
+              <Link href="/deadlines" className="mini-row" key={d.id}>
+                <span>
+                  <strong>{d.title}</strong>
+                  <small>{fmtDate(d.dueDate)}</small>
+                </span>
+                <span
+                  className={`badge ${daysUntil(d.dueDate) < 7 ? "warning" : "neutral"}`}
+                >
+                  {daysUntil(d.dueDate) < 0
+                    ? "Overdue"
+                    : daysUntil(d.dueDate) === 0
+                      ? "Today"
+                      : `${daysUntil(d.dueDate)} ${daysUntil(d.dueDate) === 1 ? "day" : "days"}`}
+                </span>
+              </Link>
+            ))}
+            {!deadlines.length && <Empty title="No deadlines recorded" />}
+          </div>
+        </section>
+        <section>
+          <SectionTitle
+            title="Your travel wallet"
+            action={
+              <Link className="text-link" href="/points">
+                Open wallet
+              </Link>
+            }
+          />
+          <div className="card mini-list">
+            {p.points.slice(0, 4).map((b) => (
+              <Link href="/points" className="mini-row" key={b.id}>
+                <span>
+                  <strong>{b.program}</strong>
+                  <small>
+                    {b.owner} · Checked {fmtDate(b.asOf)}
+                  </small>
+                </span>
+                <strong>
+                  {b.approximate ? "~" : ""}
+                  {fmtPoints(b.balance)}
+                </strong>
+              </Link>
+            ))}
+          </div>
+        </section>
       </div>
       {pins.length > 0 && (
         <>
