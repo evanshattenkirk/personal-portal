@@ -1,13 +1,15 @@
+import { connection } from "next/server";
 import { Card, Stat } from "@/components/ui";
-import { fmtDate, fmtPoints, getPoints } from "@/lib/data";
+import { fmtDate, fmtPoints, getPoints, summarizePoints } from "@/lib/data";
 import { creditTrackers } from "@/lib/seed";
 
 
 export const instant = false; // single-user portal: render at request time
 
 export default async function PointsPage() {
+  await connection(); // balance age depends on today's date
   const points = await getPoints();
-  const total = points.reduce((s, p) => s + p.balance, 0);
+  const pts = summarizePoints(points);
   const asOf = points.reduce(
     (latest, p) => (p.asOf > latest ? p.asOf : latest),
     points[0]?.asOf ?? "",
@@ -25,9 +27,17 @@ export default async function PointsPage() {
 
       <Card title="Balances">
         <div className="mb-5 flex gap-10">
-          <Stat label="Total points" value={fmtPoints(total)} />
+          <Stat label="Total points" value={pts.totalLabel} />
           <Stat label="Programs" value={String(points.length)} />
+          {pts.owners.length > 1 ? (
+            <Stat label="Accounts" value={pts.owners.join(" + ")} />
+          ) : null}
         </div>
+        {pts.stale ? (
+          <p className="-mt-2 mb-4 text-xs text-amber-300">
+            Oldest balance is {pts.ageDays} days old. Refresh before booking.
+          </p>
+        ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           {points.map((p) => (
             <div

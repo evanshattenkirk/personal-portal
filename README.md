@@ -1,9 +1,22 @@
 # Personal Portal
 
-Evan's private, single-user home base: trips with their bookings, points
-balances, watched deadlines, and links to his projects and ledgers. Built in
+Evan's single-user home base: trips with their bookings, points balances,
+watched deadlines, and links to his projects. Built in
 his usual stack: Next.js (App Router) + Supabase (Postgres with row-level
 security) + TypeScript + Tailwind.
+
+## Public code, private data
+
+The code is public; the data is not. Real trips, bookings, balances and
+deadlines live only in Supabase behind row-level security and the owner's
+magic-link sign-in. `src/lib/seed.ts` and `supabase/seed.sql` hold fictional
+demo data only, and live mode never falls back to them. Keep real
+confirmation numbers and balances out of git.
+
+Sign-in is locked to one account three ways: the login form never creates
+users (`shouldCreateUser: false`), signups should be disabled in Supabase
+Auth, and `PORTAL_OWNER_EMAIL` (optional, server-only) rejects any other
+signed-in account in the proxy.
 
 ## Pages
 
@@ -14,7 +27,7 @@ security) + TypeScript + Tailwind.
 | `/trips/[slug]` | Trip detail with a bookings table: provider, confirmations, dates, paid vs net cost, free-cancellation deadlines |
 | `/points`     | Points balances by program with as-of dates, plus Amex Gold credit trackers ($10/mo dining, $7/mo Dunkin) and the Platinum Resy credit |
 | `/deadlines`  | Watched deadlines table with due dates, countdowns, and status       |
-| `/links`      | Project and ledger cards (Pastefront, TAP Marine, Roomy, AgentDesk, portfolio, Robinhood and Hard Rock ledgers) |
+| `/links`      | Project cards (live products, repos, and private projects)           |
 | `/login`      | Email magic-link sign-in (Supabase Auth)                             |
 
 ## Run locally

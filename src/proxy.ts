@@ -36,17 +36,23 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Optional owner allowlist: when PORTAL_OWNER_EMAIL is set, any other
+  // signed-in account is treated as signed out.
+  const owner = process.env.PORTAL_OWNER_EMAIL?.trim().toLowerCase();
+  const isOwner =
+    !!user && (!owner || user.email?.trim().toLowerCase() === owner);
+
   const { pathname } = request.nextUrl;
   const isPublic = pathname === "/login" || pathname.startsWith("/auth/");
 
-  if (!user && !isPublic) {
+  if (!isOwner && !isPublic) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (user && pathname === "/login") {
+  if (isOwner && pathname === "/login") {
     const homeUrl = request.nextUrl.clone();
     homeUrl.pathname = "/";
     homeUrl.search = "";
