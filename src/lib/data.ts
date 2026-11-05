@@ -33,6 +33,7 @@ export async function getPortalData(): Promise<PortalData> {
     throw new Error("Sign in with the owner account to load your portal.");
   const result = emptyData();
   result.brainstormReady = true;
+  result.assistantReady = true;
   await Promise.all(
     (Object.keys(tables) as EntityName[]).map(async (entity) => {
       const { data, error } = await db
@@ -45,7 +46,8 @@ export async function getPortalData(): Promise<PortalData> {
           `Portal optional read failed: ${tables[entity]}`,
           error.code,
         );
-        result.brainstormReady = false;
+        if (entity === "proposals") result.assistantReady = false;
+        else result.brainstormReady = false;
         return;
       }
       if (error || !data) {

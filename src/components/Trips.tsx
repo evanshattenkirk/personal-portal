@@ -6,14 +6,17 @@ import { EntityEditor, newRecord } from "./Editors";
 import { Action, Icon, Empty } from "./Kit";
 import { upcomingTrips } from "@/lib/model";
 import { buildAIBrief } from "@/lib/brainstorm";
+import Proposals from "./Proposals";
 export default function Trips() {
   const p = usePortal();
   const [q, setQ] = useState(""),
     [view, setView] = useState("upcoming"),
     [adding, setAdding] = useState(false),
     [copied, setCopied] = useState(false);
+  const isOpenAsk = (n: (typeof p.notes)[number]) =>
+    n.status === "open" && (n.author ?? "evan") === "evan";
   const withNotes = p.trips.filter((t) =>
-    p.notes.some((n) => n.tripSlug === t.slug && n.status === "open"),
+    p.notes.some((n) => n.tripSlug === t.slug && isOpenAsk(n)),
   );
   const copyAll = async () => {
     const text = [
@@ -75,14 +78,15 @@ export default function Trips() {
       )}
       {withNotes.length > 0 && (
         <div className="notice" style={{ marginBottom: 20 }}>
-          {p.notes.filter((n) => n.status === "open").length} open notes for
-          your AI across {withNotes.length}{" "}
-          {withNotes.length === 1 ? "trip" : "trips"}.{" "}
+          {p.notes.filter(isOpenAsk).length} open notes for your AI across{" "}
+          {withNotes.length} {withNotes.length === 1 ? "trip" : "trips"}.{" "}
           <Action className="button ghost small" onClick={copyAll}>
             {copied ? "✓ Copied" : "Copy all for your AI"}
           </Action>
         </div>
       )}
+      {/* Portal-wide finds from the weekly check, like card or airline bonuses. */}
+      <Proposals tripSlug={null} />
       <div className="toolbar">
         <button
           className={`pill ${view === "upcoming" ? "active" : ""}`}

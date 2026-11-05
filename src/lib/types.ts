@@ -80,7 +80,11 @@ export interface PortalLink {
 }
 
 export type SuggestionCategory =
-  "planning" | "flight" | "food" | "activity" | "stay";
+  | "planning"
+  | "flight"
+  | "food"
+  | "activity"
+  | "stay";
 
 export type SuggestionStatus = "suggested" | "saved" | "booked" | "dismissed";
 
@@ -167,6 +171,31 @@ export interface TripNote {
   status: "open" | "done";
   aiReply: string | null; // what the AI did or answered, pasted back
   createdAt: string | null; // ISO timestamp
+  author?: string | null; // "evan" (default) or the assistant's name: claude, muse, duet
+  attachments?: string | null; // newline-separated private storage paths
+  source?: string | null; // e.g. "daily-check", "weekly-check"
+}
+// Something an assistant suggests. Nothing in `changes` is saved until Evan confirms.
+export interface TripProposal {
+  id: string;
+  tripSlug: string | null; // null for portal-wide items like a card bonus
+  title: string;
+  body: string | null;
+  kind:
+    | "plan_change"
+    | "idea"
+    | "event"
+    | "deal"
+    | "price_drop"
+    | "bonus"
+    | "info";
+  changes: string | null; // JSON list, see src/lib/proposals.ts
+  status: "pending" | "accepted" | "rejected";
+  author: string | null;
+  url: string | null;
+  createdAt: string | null;
+  decidedAt: string | null;
+  feedback: string | null;
 }
 // One per trip: what the trip should feel like, so brainstorming stays on target.
 export interface TripBrief {
@@ -195,6 +224,7 @@ export interface EntityMap {
   credits: CreditPeriod;
   notes: TripNote;
   briefs: TripBrief;
+  proposals: TripProposal;
 }
 export type EntityName = keyof EntityMap;
 export type PortalData = { [K in EntityName]: EntityMap[K][] } & {
@@ -202,6 +232,8 @@ export type PortalData = { [K in EntityName]: EntityMap[K][] } & {
   trekUrl?: string | null;
   // False when the brainstorm migration (0007) hasn't been run yet.
   brainstormReady?: boolean;
+  // False when the assistant migration (0008) hasn't been run yet.
+  assistantReady?: boolean;
   ledgers: Ledger[];
   ledgerEntries: LedgerEntry[];
   externalTasks: PortalTask[];

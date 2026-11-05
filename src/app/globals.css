@@ -1408,3 +1408,128 @@ summary:focus-visible {
 .brief-facts dd {
   margin: 3px 0 0;
 }
+
+/* Trip chat and proposals */
+.chat-log {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px 0;
+  max-height: 560px;
+  overflow-y: auto;
+}
+.chat-bubble {
+  max-width: 88%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 13px;
+  background: var(--paper);
+}
+.chat-bubble.mine {
+  align-self: flex-end;
+  background: #edf1e5;
+  border-color: #dce4ce;
+}
+.chat-bubble.theirs {
+  align-self: flex-start;
+  background: var(--white);
+}
+.chat-bubble.theirs.open {
+  border-color: var(--coral);
+}
+.chat-bubble p {
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.chat-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 5px;
+  font-size: 11px;
+}
+.chat-meta small {
+  color: var(--muted);
+  margin-left: auto;
+}
+.chat-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 11px;
+}
+.chat-compose {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+.shot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.shot-row img {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  display: block;
+}
+.shot-placeholder {
+  display: inline-grid;
+  place-items: center;
+  width: 96px;
+  height: 72px;
+  border-radius: 6px;
+  border: 1px dashed var(--line);
+  font-size: 10px;
+  color: var(--muted);
+}
+.file-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.file-chips button {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  color: inherit;
+}
+label.button {
+  cursor: pointer;
+}
+.button.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.proposals {
+  margin-bottom: 24px;
+}
+.proposal-card {
+  border-color: #e8d9b9;
+}
+.proposal-card h3 {
+  font-size: 17px;
+  line-height: 1.4;
+}
+.proposal-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 8px 0;
+  white-space: pre-wrap;
+}
+.change-list {
+  margin: 10px 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.7;
+}

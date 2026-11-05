@@ -3,31 +3,21 @@ import { useState } from "react";
 import { usePortal } from "./PortalProvider";
 import { Action, Empty, SectionTitle } from "./Kit";
 import { newRecord } from "./Editors";
+import TripChat from "./TripChat";
+import Proposals from "./Proposals";
 import {
   buildAIBrief,
   hasTag,
-  noteKindLabel,
   parseAIIdeas,
   promptStarters,
   splitTags,
 } from "@/lib/brainstorm";
-import { fmtDate } from "@/lib/model";
 import type {
   EntityName,
   Suggestion,
   SuggestionCategory,
   Trip,
-  TripNote,
 } from "@/lib/types";
-
-const noteKinds: TripNote["kind"][] = ["note", "ask_ai", "preference"];
-const noteHint: Record<TripNote["kind"], string> = {
-  note: "A thought, a link, something someone said…",
-  ask_ai:
-    "e.g. Find three all-inclusives with a good live music scene, under $700 a night.",
-  preference:
-    "e.g. Mom wants a direct flight. We'd rather be walkable than on a remote beach.",
-};
 
 async function copyText(value: string) {
   try {
@@ -64,12 +54,8 @@ export default function Brainstorm({
     .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
   const suggestions = p.suggestions.filter((s) => s.tripSlug === slug);
   const scenarios = p.scenarios.filter((s) => s.tripSlug === slug);
-  const openNotes = notes.filter((n) => n.status === "open");
-  const doneNotes = notes.filter((n) => n.status === "done");
 
-  const [draft, setDraft] = useState(""),
-    [kind, setKind] = useState<TripNote["kind"]>("ask_ai"),
-    [copied, setCopied] = useState(""),
+  const [copied, setCopied] = useState(""),
     [reply, setReply] = useState(""),
     [importMsg, setImportMsg] = useState(""),
     [quick, setQuick] = useState(""),
@@ -94,16 +80,6 @@ export default function Brainstorm({
     a.download = `${slug}-ai-brief.md`;
     a.click();
     URL.revokeObjectURL(a.href);
-  };
-
-  const saveNote = async () => {
-    if (!draft.trim()) throw new Error("Write a note first.");
-    await p.save("notes", {
-      ...(newRecord("notes", slug) as unknown as TripNote),
-      body: draft.trim(),
-      kind,
-    });
-    setDraft("");
   };
 
   const importIdeas = async () => {
@@ -158,120 +134,9 @@ export default function Brainstorm({
           Supabase SQL editor once, then reload. Everything else keeps working.
         </div>
       )}
+      <Proposals tripSlug={slug} showDecided />
       <div className="grid-two">
-        <section className="card brainstorm-notes">
-          <span className="eyebrow">Notes for your AI</span>
-          <h2>Jot it down, hand it off</h2>
-          <p className="page-intro">
-            Type anything here. When you&apos;re ready, copy the brief below and
-            paste it to Claude. It reads every open note and acts on the
-            &ldquo;Ask AI&rdquo; ones.
-          </p>
-          <div className="toolbar" style={{ margin: "14px 0 10px" }}>
-            {noteKinds.map((k) => (
-              <button
-                key={k}
-                className={`pill ${kind === k ? "active" : ""}`}
-                onClick={() => setKind(k)}
-              >
-                {noteKindLabel[k]}
-              </button>
-            ))}
-          </div>
-          <label className="field wide">
-            <span className="sr-only">New note</span>
-            <textarea
-              rows={4}
-              value={draft}
-              placeholder={noteHint[kind]}
-              disabled={!ready}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-                  e.preventDefault();
-                  saveNote().catch(() => undefined);
-                }
-              }}
-            />
-          </label>
-          <div className="card-actions" style={{ marginTop: 10 }}>
-            <Action className="button" onClick={saveNote}>
-              Save note
-            </Action>
-            <span
-              className="muted"
-              style={{ fontSize: 11, alignSelf: "center" }}
-            >
-              ⌘/Ctrl + Enter saves
-            </span>
-          </div>
-          <div className="note-list">
-            {openNotes.map((n) => (
-              <article className="note-item" key={n.id}>
-                <div className="card-header" style={{ marginBottom: 6 }}>
-                  <span
-                    className={`badge ${n.kind === "ask_ai" ? "coral" : n.kind === "preference" ? "success" : "neutral"}`}
-                  >
-                    {n.kind === "preference"
-                      ? ""
-                      : `#${openNotes.filter((x) => x.kind !== "preference").indexOf(n) + 1} · `}
-                    {noteKindLabel[n.kind]}
-                  </span>
-                  <small className="muted">
-                    {n.createdAt ? fmtDate(n.createdAt.slice(0, 10)) : ""}
-                  </small>
-                </div>
-                <p style={{ whiteSpace: "pre-wrap" }}>{n.body}</p>
-                {n.aiReply && (
-                  <details>
-                    <summary className="text-link">What your AI said</summary>
-                    <p style={{ whiteSpace: "pre-wrap" }}>{n.aiReply}</p>
-                  </details>
-                )}
-                <div className="card-actions" style={{ marginTop: 8 }}>
-                  <Action
-                    className="button small secondary"
-                    onClick={() => p.save("notes", { ...n, status: "done" })}
-                  >
-                    Mark handled
-                  </Action>
-                  <button
-                    className="button small ghost"
-                    onClick={() => onEdit("notes", n)}
-                  >
-                    Edit / add AI reply
-                  </button>
-                </div>
-              </article>
-            ))}
-            {!openNotes.length && ready && (
-              <p className="muted" style={{ fontSize: 12, marginTop: 14 }}>
-                No open notes. Anything you add shows up in the AI brief.
-              </p>
-            )}
-          </div>
-          {!!doneNotes.length && (
-            <details style={{ marginTop: 14 }}>
-              <summary className="text-link">
-                Handled notes ({doneNotes.length})
-              </summary>
-              {doneNotes.map((n) => (
-                <div className="mini-row" key={n.id}>
-                  <span>
-                    <strong>{noteKindLabel[n.kind]}</strong>
-                    <small style={{ whiteSpace: "pre-wrap" }}>{n.body}</small>
-                  </span>
-                  <Action
-                    className="button small secondary"
-                    onClick={() => p.save("notes", { ...n, status: "open" })}
-                  >
-                    Reopen
-                  </Action>
-                </div>
-              ))}
-            </details>
-          )}
-        </section>
+        <TripChat slug={slug} onEdit={onEdit} />
         <section className="card">
           <div className="card-header">
             <div>

@@ -156,6 +156,21 @@ export function newRecord(
       who: null,
       mustHaves: null,
     },
+    // Proposals come from assistants and are decided with decideProposal.
+    proposals: {
+      ...base,
+      tripSlug,
+      title: "",
+      body: null,
+      kind: "info",
+      changes: null,
+      status: "pending",
+      author: null,
+      url: null,
+      createdAt: null,
+      decidedAt: null,
+      feedback: null,
+    },
     links: {
       ...base,
       name: "",
@@ -436,15 +451,10 @@ export function EntityEditor({
         false,
         "Comma-separated: food, drinks, live music…",
       ),
-      field(
-        "avoid",
-        "Skip",
-        "text",
-        false,
-        "Comma-separated: hiking, skiing…",
-      ),
+      field("avoid", "Skip", "text", false, "Comma-separated: hiking, skiing…"),
       field("mustHaves", "Must-haves and dealbreakers", "textarea"),
     ],
+    proposals: [],
     links: [
       field("name", "Resource name", "text", true),
       field("category", "Category", "text", true),
@@ -467,6 +477,7 @@ export function EntityEditor({
     links: "Resource",
     notes: "Note for your AI",
     briefs: "What this trip should feel like",
+    proposals: "Proposal",
   };
   const initial = { ...record };
   if (entity === "bookings") {

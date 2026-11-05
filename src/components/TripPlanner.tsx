@@ -88,8 +88,22 @@ export default function TripPlanner({ slug }: { slug: string }) {
     tasks = p.tasks.filter((t) => t.tripSlug === slug && t.status !== "done");
   const brief = p.briefs.find((b) => b.tripSlug === slug) ?? null,
     openNotes = p.notes.filter(
-      (n) => n.tripSlug === slug && n.status === "open",
-    );
+      (n) =>
+        n.tripSlug === slug &&
+        n.status === "open" &&
+        (n.author ?? "evan") === "evan" &&
+        n.kind !== "preference",
+    ),
+    unreadReplies = p.notes.filter(
+      (n) =>
+        n.tripSlug === slug &&
+        n.status === "open" &&
+        (n.author ?? "evan") !== "evan",
+    ),
+    pendingProposals = p.proposals.filter(
+      (x) => x.tripSlug === slug && x.status === "pending",
+    ),
+    attention = unreadReplies.length + pendingProposals.length;
   const totals = creditTotals(bookings),
     readiness = getReadiness(bookings);
   const selected = scenarios.find((s) => s.id === trip.selectedScenarioId);
@@ -340,9 +354,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
                 ? "Brainstorm & notes"
                 : t.charAt(0).toUpperCase() + t.slice(1)}
             {t === "tasks" && tasks.length ? ` (${tasks.length})` : ""}
-            {t === "brainstorm" && openNotes.length
-              ? ` (${openNotes.length})`
-              : ""}
+            {t === "brainstorm" && attention ? ` (${attention} new)` : ""}
           </button>
         ))}
       </nav>
@@ -389,6 +401,21 @@ export default function TripPlanner({ slug }: { slug: string }) {
                   ? `${openNotes.length} open note${openNotes.length === 1 ? "" : "s"} for your AI`
                   : "Write a note for your AI"}
               </button>
+              {attention > 0 && (
+                <button
+                  className="button small"
+                  onClick={() => go("brainstorm")}
+                >
+                  {[
+                    unreadReplies.length &&
+                      `${unreadReplies.length} new ${unreadReplies.length === 1 ? "reply" : "replies"}`,
+                    pendingProposals.length &&
+                      `${pendingProposals.length} to confirm`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </button>
+              )}
             </div>
           </section>
           <div className="grid-two">

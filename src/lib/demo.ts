@@ -92,6 +92,7 @@ export function demoData(): PortalData {
     itinerary: [],
     credits: [],
     brainstormReady: true,
+    assistantReady: true,
     briefs: [
       {
         id: "brief-kyoto",
@@ -107,7 +108,56 @@ export function demoData(): PortalData {
         mustHaves: null,
       },
     ],
+    proposals: [
+      {
+        id: "demo-proposal",
+        tripSlug: "kyoto",
+        title: "Add two dinner ideas near the stay",
+        body: "Fictional sample: two places that take reservations, a short walk from the ryokan.",
+        kind: "plan_change",
+        changes: JSON.stringify([
+          {
+            op: "create",
+            entity: "suggestions",
+            record: {
+              title: "Sample kaiseki dinner",
+              category: "food",
+              priceLabel: "$$$",
+              tags: "Food",
+            },
+          },
+          {
+            op: "create",
+            entity: "suggestions",
+            record: {
+              title: "Sample izakaya",
+              category: "food",
+              priceLabel: "$$",
+              tags: "Food",
+            },
+          },
+        ]),
+        status: "pending",
+        author: "claude",
+        url: null,
+        createdAt: "2026-11-02T13:00:00.000Z",
+        decidedAt: null,
+        feedback: null,
+      },
+    ],
     notes: [
+      {
+        id: "demo-ai-reply",
+        tripSlug: "kyoto",
+        body: "Fictional sample reply: I found two dinner spots and put them in a proposal below. Confirm to add them to your ideas.",
+        kind: "note",
+        status: "open",
+        aiReply: null,
+        createdAt: "2026-11-02T13:00:00.000Z",
+        author: "claude",
+        attachments: null,
+        source: "daily-check",
+      },
       {
         id: "demo-note",
         tripSlug: "kyoto",
