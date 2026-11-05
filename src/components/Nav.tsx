@@ -1,8 +1,8 @@
 "use client";
-import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "./Kit";
+import { BRAND } from "./brand";
 const items = [
   ["/", "Home", "home"],
   ["/trips", "Trips", "plane"],
@@ -14,26 +14,12 @@ const items = [
 ];
 export default function Nav({ demo = false }: { demo?: boolean }) {
   const path = usePathname();
-  // Preview only: ?look=a|b|c switches between the candidate directions.
-  useEffect(() => {
-    try {
-      const look =
-        new URLSearchParams(window.location.search).get("look") ??
-        sessionStorage.getItem("look");
-      if (look && /^[abc]$/.test(look)) {
-        sessionStorage.setItem("look", look);
-        document.documentElement.dataset.direction = look;
-      }
-    } catch {}
-  }, [path]);
   return (
     <header className="site-header">
       <div className="nav-wrap">
         <Link href="/" className="brand">
           <span className="brand-mark" aria-hidden="true" />
-          <span>
-            Evan’s <b>Fieldbook</b>
-          </span>
+          <span>{BRAND}</span>
         </Link>
         <nav aria-label="Main navigation">
           {items.map(([href, label, icon]) => (
@@ -69,7 +55,7 @@ export default function Nav({ demo = false }: { demo?: boolean }) {
       </div>
       {demo && (
         <div className="demo-banner">
-          Demo fieldbook · changes save in this browser only
+          Demo · changes save in this browser only
         </div>
       )}
     </header>

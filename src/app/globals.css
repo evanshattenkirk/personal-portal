@@ -1,9 +1,8 @@
 /* ==========================================================================
-   Evan's Fieldbook
+   Evan's Portal
    One token set drives everything below. Spacing: 4 8 12 16 24 32 48 64.
    ========================================================================== */
 :root {
-  /* Direction B "Instrument" is the base */
   --paper: #f4f2ee;
   --white: #fcfbf8;
   --ink: #16181a;
@@ -12,6 +11,8 @@
   --line-strong: #cfcac0;
   --teal: #1f5c55;
   --coral: #c8502a;
+  --sky: #3a6488; /* second accent: dates, countdowns, travel */
+  --sky-soft: #e6edf3;
   --sand: #ece8df;
   --hover: #efece6;
   --ok: #2e7d5b;
@@ -62,96 +63,6 @@
   --header-h: 52px;
   --page-top: 32px;
   --control-h: 36px;
-}
-
-/* ---------- Direction A: "Margin", quietly editorial ---------- */
-:root[data-direction="a"] {
-  --paper: #f7f4ec;
-  --white: #fffdf8;
-  --ink: #22231f;
-  --muted: #6e6a60;
-  --line: #e4ded1;
-  --line-strong: #cfc7b5;
-  --teal: #2f5d50;
-  --coral: #b4532a;
-  --sand: #efe9da;
-  --hover: #f1ecdf;
-  --ok: #3d6b4f;
-  --ok-soft: #e4ece2;
-  --warn: #94600f;
-  --warn-soft: #f4ead4;
-  --focus: #b4532a;
-  --font-sans: var(--f-schibsted), system-ui, sans-serif;
-  --font-display: var(--f-newsreader), Georgia, serif;
-  --font-mono: var(--f-schibsted), system-ui, sans-serif;
-  --font-num: var(--f-schibsted), system-ui, sans-serif;
-  --h1-size: 40px;
-  --h1-line: 44px;
-  --h1-weight: 500;
-  --h1-track: -0.02em;
-  --h1-axes: "opsz" 72;
-  --h2-size: 24px;
-  --h2-line: 30px;
-  --h2-weight: 500;
-  --h2-track: -0.01em;
-  --h2-axes: "opsz" 36;
-  --title-size: 24px;
-  --title-weight: 500;
-  --title-axes: "opsz" 36;
-  --big-num-size: 32px;
-  --body: 15px;
-  --body-line: 24px;
-  --meta: 12.5px;
-  --r-card: 6px;
-  --r-ctl: 4px;
-  --maxw: 1120px;
-  --header-h: 60px;
-  --page-top: 48px;
-}
-
-/* ---------- Direction C: "Trailhead", more character ---------- */
-:root[data-direction="c"] {
-  --paper: #efe9dc;
-  --white: #faf7f0;
-  --ink: #1e2b24;
-  --muted: #66675a;
-  --line: #d9d1bf;
-  --line-strong: #c4b99f;
-  --teal: #2c5e4a;
-  --coral: #d9662f;
-  --sand: #e5dcc8;
-  --hover: #e9e2d1;
-  --ok: #2c5e4a;
-  --ok-soft: #dfe8dc;
-  --warn: #a8670e;
-  --warn-soft: #f6e1d2;
-  --focus: #d9662f;
-  --font-sans: var(--f-bricolage), system-ui, sans-serif;
-  --font-display: var(--f-bricolage), system-ui, sans-serif;
-  --font-mono: var(--f-spline-mono), ui-monospace, monospace;
-  --font-num: var(--f-bricolage), system-ui, sans-serif;
-  --h1-size: 44px;
-  --h1-line: 44px;
-  --h1-weight: 700;
-  --h1-track: -0.025em;
-  --h1-axes: "wdth" 82, "opsz" 96;
-  --h2-size: 22px;
-  --h2-line: 28px;
-  --h2-weight: 650;
-  --h2-track: -0.01em;
-  --h2-axes: "wdth" 88, "opsz" 32;
-  --title-size: 22px;
-  --title-weight: 700;
-  --title-axes: "wdth" 82, "opsz" 32;
-  --big-num-size: 32px;
-  --body: 15px;
-  --body-line: 24px;
-  --r-card: 10px;
-  --r-ctl: 6px;
-  --border: 1.5px;
-  --maxw: 1160px;
-  --header-h: 56px;
-  --page-top: 40px;
 }
 
 /* ---------- Base ---------- */
@@ -290,10 +201,10 @@ svg {
   font-weight: inherit;
 }
 .brand-mark {
-  width: 10px;
-  height: 10px;
-  background: var(--teal);
+  width: 12px;
+  height: 12px;
   border-radius: 2px;
+  background: linear-gradient(135deg, var(--teal) 50%, var(--sky) 50%);
 }
 .nav-wrap nav {
   display: flex;
@@ -755,22 +666,32 @@ a.card:hover {
   font-family: var(--font-mono);
   font-size: 13px;
   font-weight: 500;
-  color: var(--teal);
+  color: var(--sky);
   margin-bottom: var(--s3);
 }
-.home-actions {
-  display: flex;
-  flex-direction: column;
-  padding: var(--s1) 0 0;
+.home-top .section-title {
+  margin-top: 0;
 }
-.home-actions h2 {
-  margin-bottom: var(--s2);
+.card.mini-list .action-row {
+  align-items: center;
+  min-height: 56px;
 }
-.home-actions > .text-link {
+.card.mini-list .action-row:last-child {
+  border-bottom: 0;
+}
+.card.mini-list .empty-state {
+  padding: var(--s4) 0;
+}
+.list-link {
   margin-top: var(--s3);
 }
-.home-actions > .text-link:last-child {
-  margin-top: var(--s4);
+.home-grid > section {
+  display: flex;
+  flex-direction: column;
+}
+.home-grid > section > .hero,
+.home-grid > section > .card {
+  flex: 1;
 }
 .action-row {
   display: flex;
@@ -884,7 +805,7 @@ a.card:hover {
   font-family: var(--font-mono);
   background: transparent;
   padding: 0;
-  color: var(--muted);
+  color: var(--sky);
 }
 .badge.countdown.warning {
   color: var(--coral);
@@ -902,7 +823,7 @@ a.card:hover {
   flex-direction: column;
   overflow: hidden;
   border: var(--border) solid var(--line);
-  border-top: 3px solid var(--teal);
+  border-top: 3px solid var(--sky);
   border-radius: var(--r-card);
   background: var(--white);
 }
@@ -923,7 +844,7 @@ a.card:hover {
   right: var(--s5);
   font-family: var(--font-mono);
   font-size: var(--meta);
-  color: var(--teal);
+  color: var(--sky);
 }
 .trip-card-body {
   flex: 1;
@@ -1162,7 +1083,7 @@ a.card:hover {
 }
 .timeline-item {
   position: relative;
-  border-left: 2px solid var(--teal);
+  border-left: 2px solid var(--sky);
   padding: var(--s3) var(--s4);
   background: var(--white);
   border-radius: 0 var(--r-ctl) var(--r-ctl) 0;
@@ -1174,7 +1095,7 @@ a.card:hover {
 }
 .timeline-item .time {
   font-family: var(--font-mono);
-  color: var(--coral);
+  color: var(--sky);
   font-size: var(--meta);
   margin-bottom: 2px;
 }
@@ -1198,7 +1119,7 @@ a.card:hover {
 .progress-track span {
   display: block;
   height: 100%;
-  background: var(--teal);
+  background: var(--sky);
 }
 .credit-values {
   display: flex;
@@ -1292,233 +1213,13 @@ a.card:hover {
   display: none;
 }
 
-/* ==========================================================================
-   Direction signatures
-   ========================================================================== */
-
-/* B: ruler divider under home sections */
-:root[data-direction="b"] .section-title {
+/* Ruler divider: a hairline with fine ticks over each section */
+.section-title {
   padding-top: var(--s4);
   background:
-    repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 8px)
+    repeating-linear-gradient(90deg, var(--sky) 0 1px, transparent 1px 8px)
       top left / 65px 5px no-repeat,
     linear-gradient(var(--line), var(--line)) top left / 100% 1px no-repeat;
-}
-
-/* A: editorial. Paper header, serif titles, photo-left hero, ruled ends */
-:root[data-direction="a"] .site-header {
-  background: var(--paper);
-}
-:root[data-direction="a"] .brand {
-  font-size: 20px;
-  font-weight: 500;
-  font-variation-settings: "opsz" 24;
-  letter-spacing: -0.01em;
-}
-:root[data-direction="a"] .brand b {
-  font-style: italic;
-}
-:root[data-direction="a"] .brand-mark {
-  display: none;
-}
-:root[data-direction="a"] .nav-wrap nav a {
-  font-size: 14px;
-}
-:root[data-direction="a"] .hero {
-  grid-template-columns: 46% 1fr;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  min-height: 300px;
-}
-:root[data-direction="a"] .hero-photo {
-  grid-column: 1;
-  border-radius: var(--r-card);
-}
-:root[data-direction="a"] .hero-content {
-  grid-column: 2;
-  padding: var(--s2) 0 var(--s2) var(--s6);
-}
-:root[data-direction="a"] .hero-stamp {
-  font-family: var(--font-sans);
-  color: var(--coral);
-}
-:root[data-direction="a"] .section-title {
-  position: relative;
-}
-:root[data-direction="a"] main > .section-title:not(:first-child),
-:root[data-direction="a"] .grid-two > section > .section-title {
-  padding-top: var(--s5);
-  background:
-    linear-gradient(var(--coral), var(--coral)) top left / 24px 1px no-repeat,
-    linear-gradient(var(--line-strong), var(--line-strong)) top left / 100% 1px
-      no-repeat;
-}
-:root[data-direction="a"] .trip-card {
-  border-top-width: var(--border);
-  border-top-color: var(--line);
-}
-:root[data-direction="a"] .trip-when {
-  font-family: var(--font-sans);
-  color: var(--coral);
-  top: 24px;
-}
-:root[data-direction="a"] .trip-card h3 {
-  font-style: normal;
-}
-:root[data-direction="a"] .trip-card p,
-:root[data-direction="a"] .meta,
-:root[data-direction="a"] .action-row p,
-:root[data-direction="a"] .mini-row small {
-  font-family: var(--font-sans);
-}
-:root[data-direction="a"] .action-number {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 18px;
-  color: var(--coral);
-}
-:root[data-direction="a"] .badge.countdown.warning {
-  color: var(--coral);
-}
-
-/* C: trailhead. Kraft paper, duotone photos, blaze marker, stamps, contours */
-:root[data-direction="c"] {
-  --contour: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='300' viewBox='0 0 420 300' fill='none' stroke='%231e2b24' stroke-opacity='.07' stroke-width='1.2'%3E%3Cpath d='M-20 210c60-40 110-30 160-60s90-90 160-80 110 50 140 40'/%3E%3Cpath d='M-20 235c70-35 120-20 175-52s95-85 160-72 100 52 125 48'/%3E%3Cpath d='M-20 260c80-30 130-10 190-44s100-78 160-62 90 52 110 54'/%3E%3Cpath d='M-20 185c55-45 100-40 150-70s85-95 160-88 120 48 150 34'/%3E%3Cpath d='M-20 160c50-50 95-50 140-80s80-100 160-96 125 44 160 26'/%3E%3Cpath d='M60 300c40-20 90-20 140-10s110 0 160-20'/%3E%3C/svg%3E");
-}
-:root[data-direction="c"] .site-header {
-  background: var(--paper);
-  border-bottom: 1.5px solid var(--ink);
-}
-:root[data-direction="c"] .brand {
-  font-size: 20px;
-  font-weight: 700;
-  font-variation-settings: "wdth" 80;
-}
-:root[data-direction="c"] .brand-mark {
-  width: 8px;
-  height: 14px;
-  background: var(--coral);
-}
-:root[data-direction="c"] .nav-wrap nav a {
-  font-size: 14px;
-}
-:root[data-direction="c"] .nav-wrap nav a.active::after {
-  left: 2px;
-  right: auto;
-  top: 50%;
-  bottom: auto;
-  width: 5px;
-  height: 12px;
-  margin-top: -6px;
-  border-radius: 2px;
-  background: var(--coral);
-}
-:root[data-direction="c"] .nav-wrap nav a.active {
-  padding-left: 14px;
-}
-:root[data-direction="c"] .card,
-:root[data-direction="c"] .trip-card,
-:root[data-direction="c"] .hero {
-  border-color: var(--line);
-}
-:root[data-direction="c"] .hero {
-  display: block;
-  min-height: 320px;
-  border: 0;
-  background: var(--teal);
-  isolation: isolate;
-}
-:root[data-direction="c"] .hero-photo {
-  position: absolute;
-  inset: 0;
-  filter: grayscale(1) contrast(1.05) brightness(1.35);
-  mix-blend-mode: multiply;
-  z-index: -1;
-}
-:root[data-direction="c"] .hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, #1e2b24cc, transparent 70%);
-  z-index: 0;
-}
-:root[data-direction="c"] .hero-content {
-  position: absolute;
-  inset: 0;
-  justify-content: flex-end;
-  color: var(--white);
-  z-index: 1;
-}
-:root[data-direction="c"] .hero h2,
-:root[data-direction="c"] .hero h1 {
-  font-size: 56px;
-  line-height: 56px;
-}
-:root[data-direction="c"] .hero p,
-:root[data-direction="c"] .hero .eyebrow {
-  color: #f1ece0;
-}
-:root[data-direction="c"] .hero .button {
-  margin-top: var(--s4);
-  background: var(--white);
-  border-color: var(--white);
-  color: var(--ink);
-}
-:root[data-direction="c"] .hero-stamp,
-:root[data-direction="c"] .trip-when {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  border: 1.5px dashed currentColor;
-  border-radius: 4px;
-  padding: 2px 8px;
-}
-:root[data-direction="c"] .hero-stamp {
-  color: var(--white);
-}
-:root[data-direction="c"] .home-actions {
-  padding: var(--s5);
-  border-radius: var(--r-card);
-  background: var(--white) var(--contour) bottom right / 420px no-repeat;
-  border: var(--border) solid var(--line);
-}
-:root[data-direction="c"] .trip-card {
-  border-top-width: var(--border);
-  border-top-color: var(--line);
-}
-:root[data-direction="c"] .trip-card:hover {
-  background: var(--white);
-  box-shadow: 4px 4px 0 var(--sand);
-  transform: translate(-1px, -1px);
-}
-:root[data-direction="c"] .trip-image {
-  display: block;
-  height: 96px;
-  background: var(--teal);
-}
-:root[data-direction="c"] .trip-image img {
-  filter: grayscale(1) contrast(1.05) brightness(1.35);
-  mix-blend-mode: multiply;
-}
-:root[data-direction="c"] .trip-when {
-  top: 108px;
-  color: var(--teal);
-  background: var(--white);
-}
-:root[data-direction="c"] .trip-card-body {
-  padding-top: var(--s3);
-}
-:root[data-direction="c"] .readiness .badge.warning::before {
-  background: var(--coral);
-}
-:root[data-direction="c"] .empty-state {
-  background: var(--contour) center / 420px;
-}
-:root[data-direction="c"] .action-number {
-  color: var(--coral);
 }
 
 /* ==========================================================================
@@ -1606,14 +1307,6 @@ a.card:hover {
   .hero-content {
     grid-row: 2;
   }
-  :root[data-direction="a"] .hero {
-    grid-template-columns: 1fr;
-    min-height: 0;
-  }
-  :root[data-direction="a"] .hero-content {
-    grid-column: 1;
-    padding: var(--s4) 0 0;
-  }
   .home-strip {
     flex-wrap: wrap;
     gap: var(--s3) var(--s5);
@@ -1678,26 +1371,24 @@ a.card:hover {
     max-width: none;
     padding: 0;
   }
-  /* :root[data-direction] matches each direction's own hero rules in
-     specificity, and these come later, so print always wins. */
-  :root[data-direction] .hero {
+  .hero {
     display: block;
     min-height: 0;
     border: 0;
     background: var(--white);
   }
-  :root[data-direction] .hero-photo,
-  :root[data-direction] .hero::before {
+  .hero-photo,
+  .hero::before {
     display: none;
   }
-  :root[data-direction] .hero-content {
+  .hero-content {
     position: static;
     padding: 0;
     color: var(--ink);
   }
-  :root[data-direction] .hero p,
-  :root[data-direction] .hero .eyebrow,
-  :root[data-direction] .hero-stamp {
+  .hero p,
+  .hero .eyebrow,
+  .hero-stamp {
     color: var(--ink);
   }
   .card,
