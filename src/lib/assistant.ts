@@ -1,6 +1,12 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { AgentError, agentInbox, agentPost, agentScreenshot } from "./agent";
+import {
+  AgentError,
+  agentInbox,
+  agentPost,
+  agentScreenshot,
+  portalRepliesSince,
+} from "./agent";
 import { proposalKinds } from "./proposals";
 
 // Instant chat replies in the portal, paid for with Evan's ANTHROPIC_API_KEY.
@@ -108,12 +114,9 @@ export async function replyInPortal(
       message: "Nothing is waiting for a reply.",
     };
 
-  const since = Date.now() - 24 * 3600 * 1000;
-  const usedToday = inbox.trips
-    .flatMap((t) => t.recentConversation)
-    .filter(
-      (n) => n.author === "claude" && Date.parse(n.createdAt ?? "") > since,
-    ).length;
+  const usedToday = await portalRepliesSince(
+    new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+  );
   if (usedToday >= DAILY_CAP)
     throw new AgentError(
       "Today's reply limit is reached. Your daily check will pick this up.",

@@ -321,3 +321,18 @@ export async function agentPost(input: unknown) {
     ],
   };
 }
+
+/** How many in-portal replies the assistant has written since a time, for the daily cap. */
+export async function portalRepliesSince(iso: string) {
+  const db = serviceClient();
+  const uid = await ownerId(db);
+  const { count, error } = await db
+    .from("trip_notes")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", uid)
+    .eq("author", "claude")
+    .in("source", ["portal-chat", "portal-research"])
+    .gte("created_at", iso);
+  if (error) throw new AgentError("Could not check today's usage.", 500);
+  return count ?? 0;
+}
