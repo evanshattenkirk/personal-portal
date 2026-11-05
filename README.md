@@ -71,19 +71,24 @@ With those set, data comes from Supabase and every route except `/login` and
    SQL editor and run it. This creates `trips`, `bookings`, `deadlines`,
    `points_balances`, and `links`, all with RLS enabled and single-user
    owner policies (`auth.uid() = user_id`).
-3. **Seed your data**: sign in once via the portal's magic link, find your
-   user id under Authentication > Users, replace the placeholder uuid in
-   `supabase/seed.sql`, and run it in the SQL editor.
-4. **Create a GitHub repo and push** (the Muse connector cannot create
+3. **Create your user**: the login form never creates accounts
+   (`shouldCreateUser: false`), so add yourself in Supabase first:
+   Authentication > Users > Add user (or Invite user) with your email. Then
+   turn off new signups under Authentication > Sign In / Providers.
+4. **Seed demo data (optional)**: find your user id under Authentication >
+   Users, replace the placeholder uuid in `supabase/seed.sql`, and run it in
+   the SQL editor.
+5. **Create a GitHub repo and push** (the Muse connector cannot create
    repos, so this step is manual):
    ```bash
    git init && git add -A && git commit -m "Personal portal v1"
    git remote add origin git@github.com:evanshattenkirk/personal-portal.git
    git push -u origin main
    ```
-5. **Deploy on Vercel**: import the repo, set the env vars
+6. **Deploy on Vercel**: import the repo, set the env vars
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (leave
-   `NEXT_PUBLIC_PORTAL_DEMO` unset), and deploy. Then add the Vercel domain
+   `NEXT_PUBLIC_PORTAL_DEMO` unset), plus `PORTAL_OWNER_EMAIL` set to your
+   login email, and deploy. Then add the Vercel domain
    to Supabase Auth > URL Configuration (Site URL and redirect URLs) so magic
    links land on the right host.
 

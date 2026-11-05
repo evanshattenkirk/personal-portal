@@ -5,7 +5,8 @@
 -- Do not paste real confirmation numbers or balances into this file.
 --
 -- HOW TO USE (fresh, empty project only)
--- 1. Sign in to the portal once with your magic link so your auth user exists.
+-- 1. Create your auth user in Supabase (Authentication > Users > Add user).
+--    The portal's login form never creates accounts.
 -- 2. Find your user id in Supabase: Authentication > Users (or run
 --    `select id, email from auth.users;`).
 -- 3. Replace the placeholder below with your uuid, then run this file in the
