@@ -1276,3 +1276,135 @@ summary:focus-visible {
 .signout {
   margin: 0;
 }
+
+/* Brainstorm & notes */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+.note-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--paper);
+}
+.note-item p {
+  font-size: 13px;
+  line-height: 1.6;
+}
+.tag-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.tag-row > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.brief-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+}
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.prompt-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+}
+.prompt-card h3 {
+  font-size: 16px;
+}
+.prompt-card p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  flex: 1;
+}
+.prompt-card .button {
+  align-self: flex-start;
+}
+.brief-preview {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  margin: 14px 0;
+  max-height: 420px;
+  overflow: auto;
+}
+.lane-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.lane h3 {
+  font-size: 16px;
+}
+.stage-card {
+  margin-bottom: 20px;
+}
+.stage-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+}
+.stage-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 6px 12px 6px 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.stage-dot {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-size: 10px;
+}
+.stage-list .done button {
+  color: var(--teal);
+}
+.stage-list .done .stage-dot {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: white;
+}
+.stage-list .current button {
+  border-color: var(--ink);
+  color: var(--ink);
+  font-weight: 600;
+}
+.brief-facts dd {
+  margin: 3px 0 0;
+}

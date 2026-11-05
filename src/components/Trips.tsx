@@ -3,13 +3,39 @@ import { useState } from "react";
 import { usePortal } from "./PortalProvider";
 import { TripCard } from "./TripCard";
 import { EntityEditor, newRecord } from "./Editors";
-import { Icon, Empty } from "./Kit";
+import { Action, Icon, Empty } from "./Kit";
 import { upcomingTrips } from "@/lib/model";
+import { buildAIBrief } from "@/lib/brainstorm";
 export default function Trips() {
   const p = usePortal();
   const [q, setQ] = useState(""),
     [view, setView] = useState("upcoming"),
-    [adding, setAdding] = useState(false);
+    [adding, setAdding] = useState(false),
+    [copied, setCopied] = useState(false);
+  const withNotes = p.trips.filter((t) =>
+    p.notes.some((n) => n.tripSlug === t.slug && n.status === "open"),
+  );
+  const copyAll = async () => {
+    const text = [
+      'Here are my open trip notes from Evan\'s Portal. Work through the "Ask AI" notes for each trip and label every answer with the trip and note number.',
+      ...withNotes.map((t) =>
+        buildAIBrief({
+          trip: t,
+          brief: p.briefs.find((b) => b.tripSlug === t.slug),
+          notes: p.notes
+            .filter((n) => n.tripSlug === t.slug)
+            .sort((a, b) =>
+              (b.createdAt ?? "").localeCompare(a.createdAt ?? ""),
+            ),
+          scenarios: p.scenarios.filter((s) => s.tripSlug === t.slug),
+          suggestions: p.suggestions.filter((s) => s.tripSlug === t.slug),
+        }),
+      ),
+    ].join("\n\n---\n\n");
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2500);
+  };
   const upcoming = upcomingTrips(p.trips);
   const trips = (
     view === "upcoming"
@@ -45,6 +71,16 @@ export default function Trips() {
           >
             Open TREK ↗
           </a>
+        </div>
+      )}
+      {withNotes.length > 0 && (
+        <div className="notice" style={{ marginBottom: 20 }}>
+          {p.notes.filter((n) => n.status === "open").length} open notes for
+          your AI across {withNotes.length}{" "}
+          {withNotes.length === 1 ? "trip" : "trips"}.{" "}
+          <Action className="button ghost small" onClick={copyAll}>
+            {copied ? "✓ Copied" : "Copy all for your AI"}
+          </Action>
         </div>
       )}
       <div className="toolbar">

@@ -109,6 +109,8 @@ export function emptyData(demo = false): PortalData {
     scenarios: [],
     itinerary: [],
     credits: [],
+    notes: [],
+    briefs: [],
     ledgers: [],
     ledgerEntries: [],
     externalTasks: [],

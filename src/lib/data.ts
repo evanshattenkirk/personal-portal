@@ -2,7 +2,7 @@ import { createClient } from "./supabase/server";
 import { isOwnerEmail } from "./owner";
 import { demoData } from "./demo";
 import { emptyData } from "./model";
-import { fromRow, tables } from "./records";
+import { fromRow, optionalTables, tables } from "./records";
 import type { EntityName, PortalData } from "./types";
 export { fmtMoney, fmtDate, fmtPoints, daysUntil } from "./model";
 export function isSupabaseConfigured() {
@@ -32,12 +32,22 @@ export async function getPortalData(): Promise<PortalData> {
   if (!user || !isPortalOwner(user.email))
     throw new Error("Sign in with the owner account to load your portal.");
   const result = emptyData();
+  result.brainstormReady = true;
   await Promise.all(
     (Object.keys(tables) as EntityName[]).map(async (entity) => {
       const { data, error } = await db
         .from(tables[entity])
         .select("*")
         .eq("user_id", user.id);
+      if (error && optionalTables.includes(entity)) {
+        // Migration 0007 not run yet: keep the rest of the portal working.
+        console.error(
+          `Portal optional read failed: ${tables[entity]}`,
+          error.code,
+        );
+        result.brainstormReady = false;
+        return;
+      }
       if (error || !data) {
         console.error(`Portal read failed: ${tables[entity]}`, error?.code);
         throw new Error(

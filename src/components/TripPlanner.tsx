@@ -6,6 +6,8 @@ import { cover } from "./TripCard";
 import { EntityEditor, newRecord } from "./Editors";
 import { Action, Empty, Icon, SectionTitle } from "./Kit";
 import Tasks from "./Tasks";
+import Brainstorm from "./Brainstorm";
+import { hasTag, planningStages, splitTags } from "@/lib/brainstorm";
 import {
   bookingStatus,
   creditTotals,
@@ -18,9 +20,16 @@ import {
 } from "@/lib/model";
 import { downloadCalendar } from "@/lib/calendar";
 import type { EntityName, Suggestion } from "@/lib/types";
-type Tab = "overview" | "options" | "itinerary" | "reservations" | "tasks";
+type Tab =
+  | "overview"
+  | "brainstorm"
+  | "options"
+  | "itinerary"
+  | "reservations"
+  | "tasks";
 const tabs: Tab[] = [
   "overview",
+  "brainstorm",
   "options",
   "itinerary",
   "reservations",
@@ -43,6 +52,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
     [query, setQuery] = useState(""),
     [category, setCategory] = useState("all"),
     [scope, setScope] = useState("all"),
+    [tagFilter, setTagFilter] = useState(""),
     [showDismissed, setShowDismissed] = useState(false);
   useEffect(() => {
     const sync = () => {
@@ -54,6 +64,8 @@ export default function TripPlanner({ slug }: { slug: string }) {
         "cat-flight": "options",
         "cat-food": "options",
         "cat-activity": "options",
+        notes: "brainstorm",
+        ideas: "brainstorm",
       };
       if (tabs.includes(hash as Tab)) setTab(hash as Tab);
       else if (legacy[hash]) setTab(legacy[hash]);
@@ -74,6 +86,10 @@ export default function TripPlanner({ slug }: { slug: string }) {
     suggestions = p.suggestions.filter((s) => s.tripSlug === slug),
     scenarios = p.scenarios.filter((s) => s.tripSlug === slug),
     tasks = p.tasks.filter((t) => t.tripSlug === slug && t.status !== "done");
+  const brief = p.briefs.find((b) => b.tripSlug === slug) ?? null,
+    openNotes = p.notes.filter(
+      (n) => n.tripSlug === slug && n.status === "open",
+    );
   const totals = creditTotals(bookings),
     readiness = getReadiness(bookings);
   const selected = scenarios.find((s) => s.id === trip.selectedScenarioId);
@@ -84,6 +100,24 @@ export default function TripPlanner({ slug }: { slug: string }) {
         `${b.date}${b.time ?? "00:00"}`,
       ),
     );
+  const stages = planningStages({
+    trip,
+    brief,
+    suggestions,
+    scenarios,
+    bookingCount: bookings.filter((b) => bookingStatus(b) !== "cancelled")
+      .length,
+    itineraryCount: itinerary.length,
+  });
+  const nextStage = stages.find((st) => !st.done);
+  const allTags = Array.from(
+    new Map(
+      [
+        ...splitTags(brief?.styles),
+        ...suggestions.flatMap((s) => splitTags(s.tags)),
+      ].map((t) => [t.toLowerCase(), t]),
+    ).values(),
+  );
   const go = (next: Tab) => {
     setTab(next);
     window.history.replaceState(null, "", `#${next}`);
@@ -131,6 +165,17 @@ export default function TripPlanner({ slug }: { slug: string }) {
           </div>
           <h3>{s.title}</h3>
           <p>{s.subtitle}</p>
+          {splitTags(s.tags).length > 0 && (
+            <div className="tag-row">
+              <div>
+                {splitTags(s.tags).map((t) => (
+                  <span className="badge neutral" key={t}>
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
           {s.priceLabel && <div className="price">{s.priceLabel}</div>}
           {s.status === "booked" && !linked && (
             <div className="notice warning">
@@ -233,7 +278,8 @@ export default function TripPlanner({ slug }: { slug: string }) {
       (scope === "all" ||
         (scope === "shortlist" && s.status === "saved") ||
         s.scenarioId === scope) &&
-      `${s.title} ${s.subtitle} ${s.detail}`
+      (!tagFilter || hasTag(s, tagFilter)) &&
+      `${s.title} ${s.subtitle} ${s.detail} ${s.tags ?? ""}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
@@ -290,13 +336,61 @@ export default function TripPlanner({ slug }: { slug: string }) {
           >
             {t === "options"
               ? "Options & ideas"
-              : t.charAt(0).toUpperCase() + t.slice(1)}
+              : t === "brainstorm"
+                ? "Brainstorm & notes"
+                : t.charAt(0).toUpperCase() + t.slice(1)}
             {t === "tasks" && tasks.length ? ` (${tasks.length})` : ""}
+            {t === "brainstorm" && openNotes.length
+              ? ` (${openNotes.length})`
+              : ""}
           </button>
         ))}
       </nav>
       {tab === "overview" && (
         <>
+          <section className="card stage-card">
+            <div className="card-header" style={{ marginBottom: 12 }}>
+              <div>
+                <span className="eyebrow">Where planning stands</span>
+                <h2>
+                  {nextStage
+                    ? `Next: ${nextStage.label.toLowerCase()}`
+                    : "Everything's in place"}
+                </h2>
+              </div>
+              {nextStage && (
+                <button className="button" onClick={() => go(nextStage.tab)}>
+                  Do this next
+                  <Icon name="arrow" size={15} />
+                </button>
+              )}
+            </div>
+            <ol className="stage-list">
+              {stages.map((st) => (
+                <li
+                  key={st.id}
+                  className={
+                    st.done ? "done" : st === nextStage ? "current" : ""
+                  }
+                >
+                  <button onClick={() => go(st.tab)}>
+                    <span className="stage-dot">{st.done ? "✓" : ""}</span>
+                    {st.label}
+                  </button>
+                </li>
+              ))}
+            </ol>
+            <div className="card-actions" style={{ marginTop: 14 }}>
+              <button
+                className="button small secondary"
+                onClick={() => go("brainstorm")}
+              >
+                {openNotes.length
+                  ? `${openNotes.length} open note${openNotes.length === 1 ? "" : "s"} for your AI`
+                  : "Write a note for your AI"}
+              </button>
+            </div>
+          </section>
           <div className="grid-two">
             <section className="card">
               <span className="eyebrow">The shape of your trip</span>
@@ -403,6 +497,14 @@ export default function TripPlanner({ slug }: { slug: string }) {
             </Empty>
           )}
         </>
+      )}
+      {tab === "brainstorm" && (
+        <Brainstorm
+          trip={trip}
+          onEdit={edit}
+          onAdd={add}
+          onOpenIdeas={() => go("options")}
+        />
       )}
       {tab === "options" && (
         <>
@@ -577,6 +679,28 @@ export default function TripPlanner({ slug }: { slug: string }) {
               {showDismissed ? "Show active" : "Dismissed"}
             </button>
           </div>
+          {allTags.length > 0 && (
+            <div className="toolbar" style={{ marginTop: -10 }}>
+              <span className="eyebrow" style={{ margin: 0 }}>
+                Style
+              </span>
+              <button
+                className={`pill ${!tagFilter ? "active" : ""}`}
+                onClick={() => setTagFilter("")}
+              >
+                Any
+              </button>
+              {allTags.map((t) => (
+                <button
+                  key={t}
+                  className={`pill ${tagFilter.toLowerCase() === t.toLowerCase() ? "active" : ""}`}
+                  onClick={() => setTagFilter(tagFilter === t ? "" : t)}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="idea-grid">
             {ideaCards(visible.filter((s) => s.itemType !== "reference"))}
           </div>

@@ -134,6 +134,28 @@ export function newRecord(
       earmarked: 0,
       tripSlug: null,
     },
+    notes: {
+      ...base,
+      tripSlug,
+      body: "",
+      kind: "note",
+      status: "open",
+      aiReply: null,
+      createdAt: new Date().toISOString(),
+    },
+    briefs: {
+      ...base,
+      tripSlug,
+      window: null,
+      nights: null,
+      styles: null,
+      vibes: null,
+      avoid: null,
+      budget: null,
+      origin: null,
+      who: null,
+      mustHaves: null,
+    },
     links: {
       ...base,
       name: "",
@@ -282,6 +304,17 @@ export function EntityEditor({
           .filter((s) => s.tripSlug === record.tripSlug)
           .map((s) => ({ value: s.id, label: s.title })),
       },
+      ...(p.brainstormReady
+        ? [
+            field(
+              "tags",
+              "Tags",
+              "text",
+              false,
+              "Comma-separated, e.g. cruise, all-inclusive, live music.",
+            ),
+          ]
+        : []),
       field("detail", "Research and caveats", "textarea"),
     ],
     tasks: [
@@ -362,6 +395,56 @@ export function EntityEditor({
       field("earmarked", "Points earmarked for a trip", "number"),
       related,
     ],
+    notes: [
+      {
+        key: "kind",
+        label: "What kind of note",
+        required: true,
+        options: [
+          { value: "note", label: "Note / thought" },
+          { value: "ask_ai", label: "Ask my AI to do this" },
+          { value: "preference", label: "Preference to remember" },
+        ],
+      },
+      select("status", "Status", ["open", "done"]),
+      field("body", "Note", "textarea", true),
+      field(
+        "aiReply",
+        "What your AI did or said",
+        "textarea",
+        false,
+        "Paste the answer back here so the note keeps its history.",
+      ),
+    ],
+    briefs: [
+      field("window", "When", "text", false, "e.g. Mid April 2027"),
+      field("nights", "Nights", "text", false, "e.g. 4-5"),
+      field("who", "Who's coming"),
+      field("origin", "Leaving from", "text", false, "Home airport or city"),
+      field("budget", "Budget feel", "text", false, "e.g. $4-6k total"),
+      field(
+        "styles",
+        "Trip styles to explore",
+        "text",
+        false,
+        "Comma-separated: cruise, Airbnb/VRBO, all-inclusive…",
+      ),
+      field(
+        "vibes",
+        "What we want",
+        "text",
+        false,
+        "Comma-separated: food, drinks, live music…",
+      ),
+      field(
+        "avoid",
+        "Skip",
+        "text",
+        false,
+        "Comma-separated: hiking, skiing…",
+      ),
+      field("mustHaves", "Must-haves and dealbreakers", "textarea"),
+    ],
     links: [
       field("name", "Resource name", "text", true),
       field("category", "Category", "text", true),
@@ -382,6 +465,8 @@ export function EntityEditor({
     credits: "Credit period",
     points: "Points balance",
     links: "Resource",
+    notes: "Note for your AI",
+    briefs: "What this trip should feel like",
   };
   const initial = { ...record };
   if (entity === "bookings") {
