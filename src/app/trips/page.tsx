@@ -10,14 +10,30 @@ export const instant = false; // single-user portal: render at request time
 export default async function TripsPage() {
   await connection(); // render at request time: countdowns use the current date
   const trips = await getTrips();
+  // Private TREK instance on the home PC, reachable only over Tailscale.
+  // Server-only env var so the tailnet hostname never ships in the repo.
+  const trekUrl = trekLink(process.env.TREK_URL);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Trips</h1>
-        <p className="mt-1 text-sm text-zinc-400">
-          Booked, researching, and planning, all in one list.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Trips</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Booked, researching, and planning, all in one list.
+          </p>
+        </div>
+        {trekUrl ? (
+          <a
+            href={trekUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-sky-300 transition-colors hover:border-zinc-500"
+            title="Opens on devices signed in to your tailnet"
+          >
+            Open TREK
+          </a>
+        ) : null}
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {trips.map(async (trip) => {
@@ -62,4 +78,15 @@ export default async function TripsPage() {
       </div>
     </div>
   );
+}
+
+function trekLink(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
 }
