@@ -1273,3 +1273,6 @@ summary:focus-visible {
   }
 }
 @media(max-width:700px){.nav-wrap nav{gap:0;overflow:visible}.nav-wrap nav a{min-width:0;flex:1;padding:8px 3px;font-size:9px;white-space:nowrap}}
+.signout {
+  margin: 0;
+}

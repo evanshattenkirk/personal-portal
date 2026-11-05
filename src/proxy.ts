@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isOwnerEmail } from "@/lib/owner";
 
 // Next.js 16 renamed middleware to proxy. This guards every route except
 // /login and the auth callback when Supabase is configured. In demo mode
@@ -36,11 +37,9 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Optional owner allowlist: when PORTAL_OWNER_EMAIL is set, any other
-  // signed-in account is treated as signed out.
-  const owner = process.env.PORTAL_OWNER_EMAIL?.trim().toLowerCase();
-  const isOwner =
-    !!user && (!owner || user.email?.trim().toLowerCase() === owner);
+  // Owner allowlist (PORTAL_OWNER_EMAIL). Any other signed-in account, or
+  // any account at all when no owner is configured, is treated as signed out.
+  const isOwner = !!user && isOwnerEmail(user.email);
 
   const { pathname } = request.nextUrl;
   const isPublic = pathname === "/login" || pathname.startsWith("/auth/");

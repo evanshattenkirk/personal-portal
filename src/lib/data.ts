@@ -1,4 +1,5 @@
 import { createClient } from "./supabase/server";
+import { isOwnerEmail } from "./owner";
 import { demoData } from "./demo";
 import { emptyData } from "./model";
 import { fromRow, tables } from "./records";
@@ -131,6 +132,5 @@ export async function getSuggestions(slug: string) {
 }
 
 export function isPortalOwner(email?: string | null) {
-  const owner = process.env.PORTAL_OWNER_EMAIL?.trim().toLowerCase();
-  return !owner || email?.trim().toLowerCase() === owner;
+  return isOwnerEmail(email);
 }
