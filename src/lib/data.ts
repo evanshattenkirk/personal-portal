@@ -2,16 +2,22 @@ import { createClient } from "./supabase/server";
 import {
   seedBookings,
   seedDeadlines,
+  seedLedgerEntries,
+  seedLedgers,
   seedLinks,
   seedPoints,
   seedSuggestions,
+  seedTasks,
   seedTrips,
 } from "./seed";
 import type {
   Booking,
   Deadline,
+  Ledger,
+  LedgerEntry,
   PointsBalance,
   PortalLink,
+  PortalTask,
   Suggestion,
   Trip,
 } from "./types";
@@ -144,6 +150,54 @@ function mapSuggestion(r: Record<string, unknown>): Suggestion {
   };
 }
 
+function mapLedger(r: Record<string, unknown>): Ledger {
+  return {
+    id: String(r.id),
+    slug: String(r.slug),
+    name: String(r.name),
+    icon: (r.icon as string) ?? null,
+    totalIn: r.total_in != null ? Number(r.total_in) : null,
+    totalOut: r.total_out != null ? Number(r.total_out) : null,
+    net: r.net != null ? Number(r.net) : null,
+    netLabel: (r.net_label as string) ?? null,
+    balanceLabel: (r.balance_label as string) ?? null,
+    balanceValue: r.balance_value != null ? Number(r.balance_value) : null,
+    entriesCount: r.entries_count != null ? Number(r.entries_count) : null,
+    asOf: (r.as_of as string) ?? null,
+    summary: (r.summary as string) ?? null,
+    sortOrder: Number(r.sort_order ?? 0),
+  };
+}
+
+function mapLedgerEntry(r: Record<string, unknown>): LedgerEntry {
+  return {
+    id: String(r.id),
+    ledgerSlug: String(r.ledger_slug),
+    entryDate: String(r.entry_date),
+    direction: r.direction as LedgerEntry["direction"],
+    amount: Number(r.amount),
+    fee: r.fee != null ? Number(r.fee) : null,
+    note: (r.note as string) ?? null,
+    sortOrder: Number(r.sort_order ?? 0),
+  };
+}
+
+function mapTask(r: Record<string, unknown>): PortalTask {
+  return {
+    id: String(r.id),
+    externalId: String(r.external_id),
+    title: String(r.title),
+    status: String(r.status),
+    statusType: (r.status_type as string) ?? null,
+    ownerLabel: (r.owner_label as string) ?? null,
+    needsEvan: Boolean(r.needs_evan),
+    actionNote: (r.action_note as string) ?? null,
+    dueDate: (r.due_date as string) ?? null,
+    url: (r.url as string) ?? null,
+    sortOrder: Number(r.sort_order ?? 0),
+  };
+}
+
 // --- Queries -----------------------------------------------------------------
 // Every query falls back to seed data when Supabase is not configured or a
 // query errors, so the UI never hard-crashes on a missing table.
@@ -231,6 +285,52 @@ export async function getSuggestions(
   // Table may not exist yet (migration 0002 pending): fall back quietly.
   if (error || !data) return seedSuggestions;
   return data.map(mapSuggestion);
+}
+
+export async function getLedgers(): Promise<Ledger[]> {
+  if (!isSupabaseConfigured()) return seedLedgers;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ledgers")
+    .select("*")
+    .order("sort_order");
+  if (error || !data) return seedLedgers;
+  return data.map(mapLedger);
+}
+
+export async function getLedger(slug: string): Promise<Ledger | null> {
+  const ledgers = await getLedgers();
+  return ledgers.find((l) => l.slug === slug) ?? null;
+}
+
+export async function getLedgerEntries(
+  ledgerSlug: string,
+): Promise<LedgerEntry[]> {
+  if (!isSupabaseConfigured()) {
+    return seedLedgerEntries.filter((e) => e.ledgerSlug === ledgerSlug);
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ledger_entries")
+    .select("*")
+    .eq("ledger_slug", ledgerSlug)
+    .order("entry_date", { ascending: false })
+    .order("sort_order", { ascending: false });
+  if (error || !data) {
+    return seedLedgerEntries.filter((e) => e.ledgerSlug === ledgerSlug);
+  }
+  return data.map(mapLedgerEntry);
+}
+
+export async function getTasks(): Promise<PortalTask[]> {
+  if (!isSupabaseConfigured()) return seedTasks;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .order("sort_order");
+  if (error || !data) return seedTasks;
+  return data.map(mapTask);
 }
 
 // --- Formatting helpers ------------------------------------------------------

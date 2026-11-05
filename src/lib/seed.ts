@@ -2,8 +2,11 @@ import type {
   Booking,
   CreditTracker,
   Deadline,
+  Ledger,
+  LedgerEntry,
   PointsBalance,
   PortalLink,
+  PortalTask,
   Suggestion,
   Trip,
 } from "./types";
@@ -273,3 +276,9 @@ export const creditTrackers: CreditTracker[] = [
 // Suggestions live only in the database (written per trip from live
 // research); demo mode simply shows none until some are added.
 export const seedSuggestions: Suggestion[] = [];
+
+// Ledgers and tasks also live only in the database (ledgers are synced from
+// the ledger documents Muse maintains; tasks mirror the Linear board).
+export const seedLedgers: Ledger[] = [];
+export const seedLedgerEntries: LedgerEntry[] = [];
+export const seedTasks: PortalTask[] = [];
