@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "./Kit";
+import { BRAND } from "./brand";
 const items = [
   ["/", "Home", "home"],
   ["/trips", "Trips", "plane"],
@@ -17,13 +18,8 @@ export default function Nav({ demo = false }: { demo?: boolean }) {
     <header className="site-header">
       <div className="nav-wrap">
         <Link href="/" className="brand">
-          <span className="brand-mark">
-            <Icon size={24} />
-          </span>
-          <span>
-            Evan’s <b>fieldbook</b>
-            <small>PLANS, PLACES & EVERYDAY LIFE</small>
-          </span>
+          <span className="brand-mark" aria-hidden="true" />
+          <span>{BRAND}</span>
         </Link>
         <nav aria-label="Main navigation">
           {items.map(([href, label, icon]) => (
@@ -59,7 +55,7 @@ export default function Nav({ demo = false }: { demo?: boolean }) {
       </div>
       {demo && (
         <div className="demo-banner">
-          Demo fieldbook · changes save in this browser only
+          Demo · changes save in this browser only
         </div>
       )}
     </header>

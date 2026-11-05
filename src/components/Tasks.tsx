@@ -67,11 +67,9 @@ export default function Tasks({
       {!compact && (
         <div className="page-heading">
           <div>
-            <span className="eyebrow">Less to remember</span>
-            <h1>A little progress.</h1>
+            <h1>Actions</h1>
             <p className="page-intro">
-              Trip to-dos, everyday deadlines, and the confirmations that need a
-              second look.
+              Trip to-dos, deadlines, and reservations to confirm.
             </p>
           </div>
         </div>

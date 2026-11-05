@@ -1,10 +1,26 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
 import Nav from "@/components/Nav";
+import { BRAND } from "@/components/brand";
 import { isDemoMode } from "@/lib/data";
 import "./globals.css";
+
+const archivo = Archivo({
+  subsets: ["latin"],
+  axes: ["wdth"],
+  variable: "--f-archivo",
+  display: "swap",
+});
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--f-plex-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: { default: "Evan’s Fieldbook", template: "%s · Evan’s Fieldbook" },
+  title: { default: BRAND, template: `%s · ${BRAND}` },
   description:
     "A personal home for trips, next steps, points, and the places worth going.",
 };
@@ -14,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${archivo.variable} ${plexMono.variable}`}>
       <body>
         <a href="#main" className="skip-link">
           Skip to content
@@ -22,7 +38,7 @@ export default function RootLayout({
         <Suspense
           fallback={
             <header className="site-header">
-              <div className="nav-wrap brand">Evan’s fieldbook</div>
+              <div className="nav-wrap brand">{BRAND}</div>
             </header>
           }
         >
@@ -32,10 +48,8 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="site-footer">
-          <span>
-            <b>EVAN’S FIELDBOOK</b> · A little more life, a little less admin.
-          </span>
-          <span>Private by design · Times in Chicago unless noted</span>
+          <span>{BRAND} · Times in Chicago unless noted</span>
+          <span>A little more life, a little less admin.</span>
         </footer>
       </body>
     </html>

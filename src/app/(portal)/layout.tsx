@@ -38,7 +38,7 @@ export default function PortalLayout({
     <Suspense
       fallback={
         <div className="empty-state" aria-live="polite">
-          Opening your fieldbook…
+          Loading…
         </div>
       }
     >

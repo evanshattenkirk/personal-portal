@@ -131,7 +131,6 @@ export function RecordForm({
       >
         <div className="modal-header">
           <div>
-            <span className="eyebrow">Your fieldbook</span>
             <h2>{title}</h2>
           </div>
           <button
