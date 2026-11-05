@@ -10,6 +10,7 @@ import {
   getDeadlines,
   getLinks,
   getPoints,
+  summarizePoints,
   getTrips,
 } from "@/lib/data";
 
@@ -34,7 +35,7 @@ export default async function DashboardPage() {
   const tripNet = nextTripBookings.reduce((s, b) => s + (b.costNet ?? 0), 0);
   const tripPaid = nextTripBookings.reduce((s, b) => s + (b.costPaid ?? 0), 0);
 
-  const totalPoints = points.reduce((s, p) => s + p.balance, 0);
+  const pts = summarizePoints(points);
   const upcoming = [...deadlines]
     .filter((d) => d.status !== "done")
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
@@ -107,10 +108,16 @@ export default async function DashboardPage() {
           }
         >
           <div className="mb-4">
-            <div className="text-3xl font-bold">{fmtPoints(totalPoints)}</div>
+            <div className="text-3xl font-bold">{pts.totalLabel}</div>
             <div className="text-xs text-zinc-500">
-              total points across {points.length} programs
+              across {points.length} programs
+              {pts.owners.length > 1 ? ` · ${pts.owners.join(" + ")}` : ""}
             </div>
+            {pts.stale ? (
+              <div className="mt-1 text-xs text-amber-300">
+                Balances are {pts.ageDays} days old. Refresh before booking.
+              </div>
+            ) : null}
           </div>
           <ul className="divide-y divide-zinc-800">
             {points.map((p) => (

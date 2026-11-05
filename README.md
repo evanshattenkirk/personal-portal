@@ -1,9 +1,22 @@
 # Personal Portal
 
-Evan's private, single-user home base: trips with their bookings, points
-balances, watched deadlines, and links to his projects and ledgers. Built in
+Evan's single-user home base: trips with their bookings, points balances,
+watched deadlines, and links to his projects. Built in
 his usual stack: Next.js (App Router) + Supabase (Postgres with row-level
 security) + TypeScript + Tailwind.
+
+## Public code, private data
+
+The code is public; the data is not. Real trips, bookings, balances and
+deadlines live only in Supabase behind row-level security and the owner's
+magic-link sign-in. `src/lib/seed.ts` and `supabase/seed.sql` hold fictional
+demo data only, and live mode never falls back to them. Keep real
+confirmation numbers and balances out of git.
+
+Sign-in is locked to one account three ways: the login form never creates
+users (`shouldCreateUser: false`), signups should be disabled in Supabase
+Auth, and `PORTAL_OWNER_EMAIL` (optional, server-only) rejects any other
+signed-in account in the proxy.
 
 ## Pages
 
@@ -14,7 +27,7 @@ security) + TypeScript + Tailwind.
 | `/trips/[slug]` | Trip detail with a bookings table: provider, confirmations, dates, paid vs net cost, free-cancellation deadlines |
 | `/points`     | Points balances by program with as-of dates, plus Amex Gold credit trackers ($10/mo dining, $7/mo Dunkin) and the Platinum Resy credit |
 | `/deadlines`  | Watched deadlines table with due dates, countdowns, and status       |
-| `/links`      | Project cards (Pastefront, AgentDesk, portfolio and private projects) |
+| `/links`      | Project cards (live products, repos, and private projects)           |
 | `/login`      | Email magic-link sign-in (Supabase Auth)                             |
 
 ## Run locally
@@ -58,19 +71,24 @@ With those set, data comes from Supabase and every route except `/login` and
    SQL editor and run it. This creates `trips`, `bookings`, `deadlines`,
    `points_balances`, and `links`, all with RLS enabled and single-user
    owner policies (`auth.uid() = user_id`).
-3. **Seed your data**: sign in once via the portal's magic link, find your
-   user id under Authentication > Users, replace the placeholder uuid in
-   `supabase/seed.sql`, and run it in the SQL editor.
-4. **Create a GitHub repo and push** (the Muse connector cannot create
+3. **Create your user**: the login form never creates accounts
+   (`shouldCreateUser: false`), so add yourself in Supabase first:
+   Authentication > Users > Add user (or Invite user) with your email. Then
+   turn off new signups under Authentication > Sign In / Providers.
+4. **Seed demo data (optional)**: find your user id under Authentication >
+   Users, replace the placeholder uuid in `supabase/seed.sql`, and run it in
+   the SQL editor.
+5. **Create a GitHub repo and push** (the Muse connector cannot create
    repos, so this step is manual):
    ```bash
    git init && git add -A && git commit -m "Personal portal v1"
    git remote add origin git@github.com:evanshattenkirk/personal-portal.git
    git push -u origin main
    ```
-5. **Deploy on Vercel**: import the repo, set the env vars
+6. **Deploy on Vercel**: import the repo, set the env vars
    `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (leave
-   `NEXT_PUBLIC_PORTAL_DEMO` unset), and deploy. Then add the Vercel domain
+   `NEXT_PUBLIC_PORTAL_DEMO` unset), plus `PORTAL_OWNER_EMAIL` set to your
+   login email, and deploy. Then add the Vercel domain
    to Supabase Auth > URL Configuration (Site URL and redirect URLs) so magic
    links land on the right host.
 

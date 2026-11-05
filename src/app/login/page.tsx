@@ -20,7 +20,9 @@ function LoginForm() {
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: redirectTo },
+      // Never create accounts from the login form: only the existing owner
+      // user can request a link. Also disable signups in Supabase Auth.
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: false },
     });
     setBusy(false);
     if (error) {

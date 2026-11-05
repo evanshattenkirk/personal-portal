@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { Card, Chip } from "@/components/ui";
 import { getBookings, getTrips, fmtMoney, daysUntil } from "@/lib/data";
 import { tripTheme } from "@/lib/trip-theme";
@@ -7,6 +8,7 @@ import { tripTheme } from "@/lib/trip-theme";
 export const instant = false; // single-user portal: render at request time
 
 export default async function TripsPage() {
+  await connection(); // render at request time: countdowns use the current date
   const trips = await getTrips();
 
   return (

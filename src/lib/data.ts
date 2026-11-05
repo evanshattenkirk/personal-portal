@@ -199,8 +199,13 @@ function mapTask(r: Record<string, unknown>): PortalTask {
 }
 
 // --- Queries -----------------------------------------------------------------
-// Every query falls back to seed data when Supabase is not configured or a
-// query errors, so the UI never hard-crashes on a missing table.
+// Seed data is only used when Supabase is not configured (demo mode). In live
+// mode a failed query logs the error and returns an empty list, so the portal
+// never silently swaps real data for demo data.
+
+function liveError(table: string, error: unknown): void {
+  console.error(`[portal] ${table} query failed`, error);
+}
 
 export async function getTrips(): Promise<Trip[]> {
   if (!isSupabaseConfigured()) return seedTrips;
@@ -209,7 +214,10 @@ export async function getTrips(): Promise<Trip[]> {
     .from("trips")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedTrips;
+  if (error || !data) {
+    liveError("trips", error);
+    return [];
+  }
   return data.map(mapTrip);
 }
 
@@ -229,9 +237,8 @@ export async function getBookings(tripSlug?: string): Promise<Booking[]> {
   if (tripSlug) query = query.eq("trip_slug", tripSlug);
   const { data, error } = await query;
   if (error || !data) {
-    return tripSlug
-      ? seedBookings.filter((b) => b.tripSlug === tripSlug)
-      : seedBookings;
+    liveError("bookings", error);
+    return [];
   }
   return data.map(mapBooking);
 }
@@ -243,7 +250,10 @@ export async function getPoints(): Promise<PointsBalance[]> {
     .from("points_balances")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedPoints;
+  if (error || !data) {
+    liveError("points_balances", error);
+    return [];
+  }
   return data.map(mapPoints);
 }
 
@@ -254,7 +264,10 @@ export async function getDeadlines(): Promise<Deadline[]> {
     .from("deadlines")
     .select("*")
     .order("due_date");
-  if (error || !data) return seedDeadlines;
+  if (error || !data) {
+    liveError("deadlines", error);
+    return [];
+  }
   return data.map(mapDeadline);
 }
 
@@ -265,7 +278,10 @@ export async function getLinks(): Promise<PortalLink[]> {
     .from("links")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedLinks;
+  if (error || !data) {
+    liveError("links", error);
+    return [];
+  }
   return data.map(mapLink);
 }
 
@@ -282,8 +298,10 @@ export async function getSuggestions(
     .eq("trip_slug", tripSlug)
     .neq("status", "dismissed")
     .order("sort_order");
-  // Table may not exist yet (migration 0002 pending): fall back quietly.
-  if (error || !data) return seedSuggestions;
+  if (error || !data) {
+    liveError("trip_suggestions", error);
+    return [];
+  }
   return data.map(mapSuggestion);
 }
 
@@ -294,7 +312,10 @@ export async function getLedgers(): Promise<Ledger[]> {
     .from("ledgers")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedLedgers;
+  if (error || !data) {
+    liveError("ledgers", error);
+    return [];
+  }
   return data.map(mapLedger);
 }
 
@@ -317,7 +338,8 @@ export async function getLedgerEntries(
     .order("entry_date", { ascending: false })
     .order("sort_order", { ascending: false });
   if (error || !data) {
-    return seedLedgerEntries.filter((e) => e.ledgerSlug === ledgerSlug);
+    liveError("ledger_entries", error);
+    return [];
   }
   return data.map(mapLedgerEntry);
 }
@@ -329,7 +351,10 @@ export async function getTasks(): Promise<PortalTask[]> {
     .from("tasks")
     .select("*")
     .order("sort_order");
-  if (error || !data) return seedTasks;
+  if (error || !data) {
+    liveError("tasks", error);
+    return [];
+  }
   return data.map(mapTask);
 }
 
@@ -353,6 +378,31 @@ export function fmtMoney(n: number | null | undefined): string {
 
 export function fmtPoints(n: number): string {
   return n.toLocaleString("en-US");
+}
+
+// Points roll-up: flags an approximate total, names every account owner in
+// it, and counts how old the oldest balance is so stale numbers are visible.
+export const POINTS_STALE_DAYS = 30;
+
+export function summarizePoints(points: PointsBalance[]) {
+  const total = points.reduce((s, p) => s + p.balance, 0);
+  const approximate = points.some((p) => p.approximate);
+  const owners = [...new Set(points.map((p) => p.owner))];
+  const oldest = points.reduce<string | null>(
+    (min, p) => (min === null || p.asOf < min ? p.asOf : min),
+    null,
+  );
+  const ageDays = oldest
+    ? Math.floor((Date.now() - new Date(`${oldest}T00:00:00`).getTime()) / 86_400_000)
+    : 0;
+  return {
+    total,
+    totalLabel: `${approximate ? "~" : ""}${fmtPoints(total)}`,
+    owners,
+    oldest,
+    ageDays,
+    stale: ageDays > POINTS_STALE_DAYS,
+  };
 }
 
 export function fmtDate(iso: string | null | undefined): string {
