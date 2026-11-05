@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import type { EntityMap, EntityName, PortalData } from "@/lib/types";
-import { decideProposal, saveRecord } from "@/app/actions";
+import { askAssistant, decideProposal, saveRecord } from "@/app/actions";
 import { validateRecord } from "@/lib/records";
 import { parseChanges, resolveChange } from "@/lib/proposals";
 type Context = PortalData & {
@@ -22,6 +22,7 @@ type Context = PortalData & {
     decision: "accepted" | "rejected",
     feedback?: string,
   ) => Promise<void>;
+  ask: (tripSlug: string, research?: boolean) => Promise<string | null>;
 };
 const PortalContext = createContext<Context | null>(null);
 const KEY = "fieldbook-fictional-demo-v3";
@@ -138,6 +139,14 @@ export default function PortalProvider({
     });
     commit(updates);
   }
+  async function ask(tripSlug: string, research?: boolean) {
+    if (data.demo) throw new Error("Instant replies need the live portal.");
+    const res = await askAssistant(tripSlug, research);
+    if (res.error) throw new Error(res.error);
+    if (res.saved.length)
+      commit(res.saved as { entity: EntityName; record: { id: string } }[]);
+    return res.message;
+  }
   async function save<K extends EntityName>(entity: K, record: EntityMap[K]) {
     validateRecord(entity, record);
     let stored = record;
@@ -168,7 +177,7 @@ export default function PortalProvider({
     setData(next);
   }
   return (
-    <PortalContext.Provider value={{ ...data, ready, save, decide }}>
+    <PortalContext.Provider value={{ ...data, ready, save, decide, ask }}>
       {children}
     </PortalContext.Provider>
   );

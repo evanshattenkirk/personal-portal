@@ -234,6 +234,8 @@ export type PortalData = { [K in EntityName]: EntityMap[K][] } & {
   brainstormReady?: boolean;
   // False when the assistant migration (0008) hasn't been run yet.
   assistantReady?: boolean;
+  // True when ANTHROPIC_API_KEY and the service key are set, so chat replies are instant.
+  instantReplies?: boolean;
   ledgers: Ledger[];
   ledgerEntries: LedgerEntry[];
   externalTasks: PortalTask[];

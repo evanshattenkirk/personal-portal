@@ -34,6 +34,10 @@ export async function getPortalData(): Promise<PortalData> {
   const result = emptyData();
   result.brainstormReady = true;
   result.assistantReady = true;
+  result.instantReplies = Boolean(
+    process.env.ANTHROPIC_API_KEY?.trim() &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),
+  );
   await Promise.all(
     (Object.keys(tables) as EntityName[]).map(async (entity) => {
       const { data, error } = await db

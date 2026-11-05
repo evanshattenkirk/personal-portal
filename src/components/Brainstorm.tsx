@@ -216,70 +216,6 @@ export default function Brainstorm({
       </div>
 
       <SectionTitle
-        eyebrow="Hand it to your AI"
-        title="Copy a brief, paste it to Claude"
-        action={
-          <button className="button secondary" onClick={download}>
-            Download brief (.md)
-          </button>
-        }
-      />
-      <div className="prompt-grid">
-        {promptStarters.map((s) => (
-          <article className="card prompt-card" key={s.id}>
-            <h3>{s.label}</h3>
-            <p>{s.ask}</p>
-            <Action className="button small" onClick={() => copy(s.id, s.ask)}>
-              {copied === s.id ? "✓ Copied" : "Copy brief + ask"}
-            </Action>
-          </article>
-        ))}
-      </div>
-      <details className="card" style={{ marginTop: 16 }}>
-        <summary className="text-link">
-          See exactly what your AI will read
-        </summary>
-        <pre className="brief-preview">{preview}</pre>
-        <Action
-          className="button small secondary"
-          onClick={() => copy("plain")}
-        >
-          {copied === "plain" ? "✓ Copied" : "Copy brief only"}
-        </Action>
-      </details>
-
-      <SectionTitle eyebrow="Bring ideas back" title="Paste your AI's reply" />
-      <section className="card">
-        <p className="page-intro">
-          The brief asks your AI to end with a short list of ideas in a fixed
-          format. Paste the whole reply here and they land in your idea
-          collection, marked as estimates to check.
-        </p>
-        <label className="field wide" style={{ marginTop: 12 }}>
-          <span className="sr-only">AI reply</span>
-          <textarea
-            rows={5}
-            value={reply}
-            placeholder="Paste the reply, including the ```json block at the end…"
-            onChange={(e) => setReply(e.target.value)}
-          />
-        </label>
-        <div className="card-actions" style={{ marginTop: 10 }}>
-          <Action className="button" onClick={importIdeas}>
-            Import ideas
-          </Action>
-          {importMsg && (
-            <span
-              className="muted"
-              style={{ fontSize: 12, alignSelf: "center" }}
-            >
-              {importMsg}
-            </span>
-          )}
-        </div>
-      </section>
-
-      <SectionTitle
         eyebrow="The brainstorm board"
         title="Ideas by trip style"
         action={
@@ -389,6 +325,76 @@ export default function Brainstorm({
           options&rdquo; and paste the reply back in.
         </Empty>
       )}
+      <details className="brief-handoff" style={{ marginTop: 28 }}>
+        <summary className="section-title" style={{ cursor: "pointer" }}>
+          <div>
+            <span className="eyebrow">Using another AI?</span>
+            <h2>Copy a brief, paste the reply back</h2>
+          </div>
+        </summary>
+        <div className="card-actions" style={{ margin: "14px 0" }}>
+          <button className="button secondary" onClick={download}>
+            Download brief (.md)
+          </button>
+        </div>
+        <div className="prompt-grid">
+          {promptStarters.map((s) => (
+            <article className="card prompt-card" key={s.id}>
+              <h3>{s.label}</h3>
+              <p>{s.ask}</p>
+              <Action
+                className="button small"
+                onClick={() => copy(s.id, s.ask)}
+              >
+                {copied === s.id ? "✓ Copied" : "Copy brief + ask"}
+              </Action>
+            </article>
+          ))}
+        </div>
+        <details className="card" style={{ marginTop: 16 }}>
+          <summary className="text-link">
+            See exactly what your AI will read
+          </summary>
+          <pre className="brief-preview">{preview}</pre>
+          <Action
+            className="button small secondary"
+            onClick={() => copy("plain")}
+          >
+            {copied === "plain" ? "✓ Copied" : "Copy brief only"}
+          </Action>
+        </details>
+
+        <SectionTitle eyebrow="Bring ideas back" title="Paste the reply" />
+        <section className="card">
+          <p className="page-intro">
+            The brief asks your AI to end with a short list of ideas in a fixed
+            format. Paste the whole reply here and they land in your idea
+            collection, marked as estimates to check.
+          </p>
+          <label className="field wide" style={{ marginTop: 12 }}>
+            <span className="sr-only">AI reply</span>
+            <textarea
+              rows={5}
+              value={reply}
+              placeholder="Paste the reply, including the ```json block at the end…"
+              onChange={(e) => setReply(e.target.value)}
+            />
+          </label>
+          <div className="card-actions" style={{ marginTop: 10 }}>
+            <Action className="button" onClick={importIdeas}>
+              Import ideas
+            </Action>
+            {importMsg && (
+              <span
+                className="muted"
+                style={{ fontSize: 12, alignSelf: "center" }}
+              >
+                {importMsg}
+              </span>
+            )}
+          </div>
+        </section>
+      </details>
     </>
   );
 }

@@ -289,13 +289,13 @@ export async function agentPost(input: unknown) {
           user_id: uid,
         })),
       )
-      .select("id");
+      .select("*");
     if (error) throw new AgentError(`Could not save ${tables[entity]}.`, 500);
-    return (data ?? []).map((r) => r.id as string);
+    return (data ?? []).map((r) => fromRow(entity, r) as { id: string });
   };
-  const messageIds = await insert("notes", messages);
-  const proposalIds = await insert("proposals", proposals);
-  let handledCount = 0;
+  const savedMessages = await insert("notes", messages);
+  const savedProposals = await insert("proposals", proposals);
+  let handledNotes: { id: string }[] = [];
   if (handled.length) {
     const { data, error } = await db
       .from("trip_notes")
@@ -303,9 +303,21 @@ export async function agentPost(input: unknown) {
       .eq("user_id", uid)
       .eq("author", "evan")
       .in("id", handled)
-      .select("id");
+      .select("*");
     if (error) throw new AgentError("Could not mark notes handled.", 500);
-    handledCount = data?.length ?? 0;
+    handledNotes = (data ?? []).map((r) => fromRow("notes", r));
   }
-  return { messageIds, proposalIds, handledCount };
+  return {
+    messageIds: savedMessages.map((r) => r.id),
+    proposalIds: savedProposals.map((r) => r.id),
+    handledCount: handledNotes.length,
+    saved: [
+      ...savedMessages.map((record) => ({ entity: "notes" as const, record })),
+      ...savedProposals.map((record) => ({
+        entity: "proposals" as const,
+        record,
+      })),
+      ...handledNotes.map((record) => ({ entity: "notes" as const, record })),
+    ],
+  };
 }
