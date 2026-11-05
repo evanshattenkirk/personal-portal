@@ -22,7 +22,11 @@ export default function Trips() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Trips</h1>
+          <span className="eyebrow">Collect moments, make plans</span>
+          <h1>Your travel chapters.</h1>
+          <p className="page-intro">
+            From “what if” to wheels up. Give every adventure a place to begin.
+          </p>
         </div>
         <button className="button" onClick={() => setAdding(true)}>
           <Icon name="plus" size={16} />

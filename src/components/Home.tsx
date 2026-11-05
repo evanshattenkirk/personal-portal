@@ -43,20 +43,19 @@ export default function Home() {
     <>
       <div className="page-heading">
         <div>
-          <h1>
+          <div className="welcome-date">
             {new Date(todayISO() + "T12:00:00Z").toLocaleDateString("en-US", {
               weekday: "long",
               month: "long",
               day: "numeric",
               timeZone: "UTC",
-            })}
-          </h1>
+            })}{" "}
+            · Your personal home base
+          </div>
+          <h1>Good things ahead, Evan.</h1>
           <p className="page-intro">
-            Hi Evan. {trips.length} upcoming{" "}
-            {trips.length === 1 ? "trip" : "trips"}
-            {needsReview.length
-              ? `, ${needsReview.length} ${needsReview.length === 1 ? "reservation" : "reservations"} to verify.`
-              : "."}
+            A place for your next adventure. And the little things that get you
+            there.
           </p>
         </div>
         <button className="button accent" onClick={() => setAdding(true)}>
@@ -64,164 +63,170 @@ export default function Home() {
           Quick add
         </button>
       </div>
-      <div className="grid-two home-top">
-        <section className="home-actions">
-          <SectionTitle
-            title="Next up"
-            action={
-              <Link className="text-link" href="/deadlines">
-                All actions
-              </Link>
-            }
-          />
-          <div className="card mini-list">
-            {needsYou.slice(0, 3).map((t) => (
-              <Link
-                key={t.id}
-                href={safeURL(t.url) ?? "/todo"}
-                className="action-row"
-                target={safeURL(t.url) ? "_blank" : undefined}
-                rel="noreferrer"
-              >
-                <span className="badge warning">You</span>
+      <div className="grid-two home-first">
+        <aside className="home-actions">
+          <span className="eyebrow">A little progress today</span>
+          <h2>Your next moves</h2>
+          <p className="muted" style={{ fontSize: 12 }}>
+            Small steps. More peace of mind.
+          </p>
+          {needsYou.slice(0, 2).map((t) => (
+            <Link
+              key={t.id}
+              href={safeURL(t.url) ?? "/todo"}
+              className="action-row"
+              target={safeURL(t.url) ? "_blank" : undefined}
+              rel="noreferrer"
+            >
+              <span className="badge warning">You</span>
+              <div className="action-body">
+                <h3>{t.actionNote ?? t.title}</h3>
+                <p>
+                  {t.externalId} · {t.status}
+                </p>
+              </div>
+              <Icon name="arrow" size={16} />
+            </Link>
+          ))}
+          {tasks
+            .slice(0, Math.max(1, 3 - needsYou.slice(0, 2).length))
+            .map((t, i) => (
+              <div className="action-row" key={t.id}>
+                <span className="action-number">0{i + 1}</span>
                 <div className="action-body">
-                  <h3>{t.actionNote ?? t.title}</h3>
+                  <h3>{t.title}</h3>
                   <p>
-                    {t.externalId} · {t.status}
+                    {p.trips.find((x) => x.slug === t.tripSlug)?.name ??
+                      "Everyday life"}
+                    {t.dueDate ? ` · ${fmtDate(t.dueDate)}` : ""}
                   </p>
                 </div>
-                <Icon name="arrow" size={16} />
-              </Link>
+                <Action
+                  className="check-button"
+                  title={`Complete ${t.title}`}
+                  onClick={() => p.save("tasks", { ...t, status: "done" })}
+                >
+                  <Icon name="check" size={16} />
+                </Action>
+              </div>
             ))}
-            {tasks
-              .slice(0, Math.max(2, 5 - needsYou.slice(0, 3).length))
-              .map((t, i) => (
-                <div className="action-row" key={t.id}>
-                  <span className="action-number">0{i + 1}</span>
-                  <div className="action-body">
-                    <h3>{t.title}</h3>
-                    <p>
-                      {p.trips.find((x) => x.slug === t.tripSlug)?.name ??
-                        "Everyday life"}
-                      {t.dueDate ? ` · ${fmtDate(t.dueDate)}` : ""}
-                    </p>
-                  </div>
-                  <Action
-                    className="check-button"
-                    title={`Complete ${t.title}`}
-                    onClick={() => p.save("tasks", { ...t, status: "done" })}
-                  >
-                    <Icon name="check" size={16} />
-                  </Action>
-                </div>
-              ))}
-            {tasks.length === 0 && needsYou.length === 0 && (
-              <Empty title="Nothing waiting">No open actions right now.</Empty>
-            )}
-          </div>
+          {tasks.length === 0 && needsYou.length === 0 && (
+            <Empty title="A little breathing room">
+              No open actions right now.
+            </Empty>
+          )}
           {needsYou.length > 0 && (
-            <Link href="/todo" className="text-link list-link">
-              Your list · {needsYou.length} need you{" "}
-              <Icon name="arrow" size={15} />
+            <Link href="/todo" className="text-link">
+              Your list · {needsYou.length} need you →
             </Link>
           )}
-        </section>
-        <section>
-          <SectionTitle
-            title="Coming up"
-            action={
-              <Link className="text-link" href="/deadlines">
-                View all
-              </Link>
-            }
-          />
-          <div className="card mini-list">
-            {deadlines.slice(0, 4).map((d) => (
-              <Link href="/deadlines" className="mini-row" key={d.id}>
-                <span>
-                  <strong>{d.title}</strong>
-                  <small>{fmtDate(d.dueDate)}</small>
-                </span>
-                <span
-                  className={`badge countdown ${daysUntil(d.dueDate) < 7 ? "warning" : "neutral"}`}
-                >
-                  {daysUntil(d.dueDate) < 0
-                    ? "Overdue"
-                    : daysUntil(d.dueDate) === 0
-                      ? "Today"
-                      : `${daysUntil(d.dueDate)} ${daysUntil(d.dueDate) === 1 ? "day" : "days"}`}
-                </span>
-              </Link>
-            ))}
-            {!deadlines.length && <Empty title="No deadlines recorded" />}
-          </div>
-        </section>
+          <Link href="/deadlines" className="text-link">
+            All actions <Icon name="arrow" size={15} />
+          </Link>
+        </aside>
+        <aside className="home-actions coming">
+          <span className="eyebrow">Don’t let these slip</span>
+          <h2>Coming up</h2>
+          {deadlines.slice(0, 4).map((d) => (
+            <Link href="/deadlines" className="mini-row" key={d.id}>
+              <span>
+                <strong>{d.title}</strong>
+                <small>{fmtDate(d.dueDate)}</small>
+              </span>
+              <span
+                className={`badge ${daysUntil(d.dueDate) < 7 ? "warning" : "neutral"}`}
+              >
+                {daysUntil(d.dueDate) < 0
+                  ? "Overdue"
+                  : daysUntil(d.dueDate) === 0
+                    ? "Today"
+                    : `${daysUntil(d.dueDate)} ${daysUntil(d.dueDate) === 1 ? "day" : "days"}`}
+              </span>
+            </Link>
+          ))}
+          {!deadlines.length && <Empty title="No deadlines recorded" />}
+          <Link href="/deadlines" className="text-link">
+            View all deadlines <Icon name="arrow" size={15} />
+          </Link>
+        </aside>
       </div>
       <div className="home-grid">
-        <section>
-          <SectionTitle title="Next trip" />
-          <div className="hero">
-            {next ? (
-              <>
-                <img className="hero-photo" src={cover(next.slug)} alt="" />
-                <div className="hero-content">
-                  <span className="hero-stamp">{tripWhen(next)}</span>
-                  <span className="eyebrow">
-                    {next.travelers ?? "?"} travelers
-                  </span>
-                  <h2>{next.name}</h2>
-                  <p>
-                    {next.notes ??
-                      "Your options, research, and next steps, all in one place."}
-                  </p>
-                  <Link className="button" href={`/trips/${next.slug}`}>
-                    Open plan <Icon name="arrow" size={16} />
-                  </Link>
-                </div>
-              </>
-            ) : (
+        <section className="hero">
+          {next ? (
+            <>
+              <img className="hero-photo" src={cover(next.slug)} alt="" />
+              <div className="hero-stamp">{tripWhen(next)}</div>
               <div className="hero-content">
-                <h2>Where to next?</h2>
+                <span className="eyebrow">
+                  On the horizon · {next.travelers ?? "?"} travelers
+                </span>
+                <h2>{next.name}</h2>
                 <p>
-                  A weekend away, a family adventure, or somewhere you’ve always
-                  wanted to go.
+                  {next.notes ??
+                    "Your options, research, and next steps, all in one place."}
                 </p>
-                <Link className="button" href="/trips">
-                  Plan a trip <Icon name="arrow" size={16} />
+                <Link className="button" href={`/trips/${next.slug}`}>
+                  Keep planning <Icon name="arrow" size={16} />
                 </Link>
               </div>
-            )}
-          </div>
+            </>
+          ) : (
+            <div className="hero-content">
+              <span className="eyebrow">Your next chapter</span>
+              <h2>Where to next?</h2>
+              <p>
+                A weekend away, a family adventure, or somewhere you’ve always
+                wanted to go.
+              </p>
+              <Link className="button" href="/trips">
+                Plan a trip <Icon name="arrow" size={16} />
+              </Link>
+            </div>
+          )}
         </section>
-        <section>
-          <SectionTitle
-            title="Wallet"
-            action={
-              <Link className="text-link" href="/points">
-                Open wallet
-              </Link>
-            }
-          />
-          <div className="card mini-list">
-            {p.points.slice(0, 4).map((b) => (
-              <Link href="/points" className="mini-row" key={b.id}>
-                <span>
-                  <strong>{b.program}</strong>
-                  <small>
-                    {b.owner} · Checked {fmtDate(b.asOf)}
-                  </small>
-                </span>
-                <strong className="num">
-                  {b.approximate ? "~" : ""}
-                  {fmtPoints(b.balance)}
-                </strong>
-              </Link>
-            ))}
-          </div>
+        <section className="card wallet-panel">
+          <span className="eyebrow">Points & miles</span>
+          <h2>Your travel wallet</h2>
+          {p.points.slice(0, 4).map((b) => (
+            <Link href="/points" className="mini-row" key={b.id}>
+              <span>
+                <strong>{b.program}</strong>
+                <small>
+                  {b.owner} · Checked {fmtDate(b.asOf)}
+                </small>
+              </span>
+              <strong>
+                {b.approximate ? "~" : ""}
+                {fmtPoints(b.balance)}
+              </strong>
+            </Link>
+          ))}
+          <Link href="/points" className="text-link">
+            Open wallet <Icon name="arrow" size={15} />
+          </Link>
         </section>
       </div>
+      <div className="home-strip">
+        <div>
+          <Icon name="plane" size={18} />
+          <strong>
+            {trips.length} upcoming {trips.length === 1 ? "trip" : "trips"}
+          </strong>
+        </div>
+        <div>
+          <Icon name="clock" size={18} />
+          <strong>
+            {needsReview.length} reservation
+            {needsReview.length === 1 ? "" : "s"} to verify
+          </strong>
+        </div>
+        <Link href="/points" className="text-link">
+          Put your points to work <Icon name="arrow" size={15} />
+        </Link>
+      </div>
       <SectionTitle
-        title="Trips"
+        eyebrow="Room for a little adventure"
+        title="Your travel chapters"
         action={
           <Link className="text-link" href="/trips">
             All trips <Icon name="arrow" size={16} />
@@ -236,10 +241,10 @@ export default function Home() {
       {pins.length > 0 && (
         <>
           <SectionTitle
-            title="Pinned"
+            title="Close at hand"
             action={
               <Link href="/links" className="text-link">
-                Library
+                Your library
               </Link>
             }
           />
@@ -252,9 +257,9 @@ export default function Home() {
                 target={safeURL(l.url) ? "_blank" : undefined}
                 rel="noreferrer"
               >
-                <span className="meta">{l.category}</span>
+                <span className="eyebrow">{l.category}</span>
                 <h3>{l.name}</h3>
-                <p className="meta">
+                <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
                   {safeURL(l.url)
                     ? "Open resource ↗"
                     : resourceHref(l, p.ledgers)

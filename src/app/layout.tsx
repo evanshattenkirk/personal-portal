@@ -18,7 +18,6 @@ const plexMono = IBM_Plex_Mono({
   variable: "--f-plex-mono",
   display: "swap",
 });
-
 export const metadata: Metadata = {
   title: { default: BRAND, template: `%s · ${BRAND}` },
   description:
@@ -48,8 +47,11 @@ export default function RootLayout({
           {children}
         </main>
         <footer className="site-footer">
-          <span>{BRAND} · Times in Chicago unless noted</span>
-          <span>A little more life, a little less admin.</span>
+          <span>
+            <b>{BRAND.toUpperCase()}</b> · A little more life, a little less
+            admin.
+          </span>
+          <span>Private by design · Times in Chicago unless noted</span>
         </footer>
       </body>
     </html>

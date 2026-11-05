@@ -18,8 +18,13 @@ export default function Nav({ demo = false }: { demo?: boolean }) {
     <header className="site-header">
       <div className="nav-wrap">
         <Link href="/" className="brand">
-          <span className="brand-mark" aria-hidden="true" />
-          <span>{BRAND}</span>
+          <span className="brand-mark">
+            <Icon size={24} />
+          </span>
+          <span>
+            {BRAND}
+            <small>PLANS, PLACES & EVERYDAY LIFE</small>
+          </span>
         </Link>
         <nav aria-label="Main navigation">
           {items.map(([href, label, icon]) => (
