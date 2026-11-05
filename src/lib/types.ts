@@ -1,6 +1,7 @@
 export type TripStatus = "booked" | "researching" | "planning" | "completed";
 
 export interface Trip {
+  selectedScenarioId?: string | null;
   id: string;
   slug: string;
   name: string;
@@ -17,6 +18,11 @@ export interface Trip {
 export type BookingKind = "hotel" | "flight" | "car" | "activity" | "other";
 
 export interface Booking {
+  status?: "needs_review" | "awaiting_confirmation" | "confirmed" | "cancelled";
+  confirmationCheckedAt?: string | null;
+  cancelAt?: string | null;
+  creditsPosted?: number;
+  sourceSuggestionId?: string | null;
   id: string;
   tripSlug: string;
   kind: BookingKind;
@@ -38,6 +44,8 @@ export interface Booking {
 }
 
 export interface PointsBalance {
+  earmarked?: number;
+  tripSlug?: string | null;
   id: string;
   program: string;
   balance: number;
@@ -50,6 +58,8 @@ export interface PointsBalance {
 export type DeadlineStatus = "open" | "done" | "watching";
 
 export interface Deadline {
+  snoozedUntil?: string | null;
+  tripSlug?: string | null;
   id: string;
   title: string;
   dueDate: string; // ISO date
@@ -59,6 +69,8 @@ export interface Deadline {
 }
 
 export interface PortalLink {
+  pinned?: boolean;
+  location?: string | null;
   id: string;
   name: string;
   url: string | null; // null means no public URL yet
@@ -68,15 +80,15 @@ export interface PortalLink {
 }
 
 export type SuggestionCategory =
-  | "planning"
-  | "flight"
-  | "food"
-  | "activity"
-  | "stay";
+  "planning" | "flight" | "food" | "activity" | "stay";
 
 export type SuggestionStatus = "suggested" | "saved" | "booked" | "dismissed";
 
 export interface Suggestion {
+  scenarioId?: string | null;
+  itemType?: "idea" | "task" | "reference";
+  verification?: "modeled" | "needs_recheck" | "checked";
+  checkedAt?: string | null;
   id: string;
   tripSlug: string;
   category: SuggestionCategory;
@@ -89,6 +101,82 @@ export interface Suggestion {
   status: SuggestionStatus;
   sortOrder: number;
 }
+
+export interface CreditTracker {
+  id: string;
+  name: string;
+  amountLabel: string;
+  cadence: string;
+  detail: string;
+}
+
+export interface Task {
+  id: string;
+  title: string;
+  tripSlug: string | null;
+  bookingId: string | null;
+  dueDate: string | null;
+  status: "todo" | "waiting" | "done";
+  notes: string | null;
+  snoozedUntil: string | null;
+}
+export interface Scenario {
+  id: string;
+  tripSlug: string;
+  title: string;
+  destination: string;
+  startDate: string | null;
+  endDate: string | null;
+  summary: string | null;
+  pointsEstimate: string | null;
+  cashEstimate: string | null;
+  availability: "modeled" | "needs_recheck" | "checked";
+  checkedAt: string | null;
+  notes: string | null;
+  status: "considering" | "selected" | "ruled_out";
+}
+export interface ItineraryItem {
+  id: string;
+  tripSlug: string;
+  date: string;
+  time: string | null;
+  title: string;
+  location: string | null;
+  notes: string | null;
+  bookingId: string | null;
+  kind: "plan" | "reservation";
+  status: "planned" | "removed";
+}
+export interface CreditPeriod {
+  id: string;
+  name: string;
+  period: string;
+  limit: number;
+  used: number;
+  posted: number;
+  resetDate: string;
+  notes: string | null;
+}
+export interface EntityMap {
+  trips: Trip;
+  bookings: Booking;
+  suggestions: Suggestion;
+  deadlines: Deadline;
+  points: PointsBalance;
+  links: PortalLink;
+  tasks: Task;
+  scenarios: Scenario;
+  itinerary: ItineraryItem;
+  credits: CreditPeriod;
+}
+export type EntityName = keyof EntityMap;
+export type PortalData = { [K in EntityName]: EntityMap[K][] } & {
+  demo: boolean;
+  trekUrl?: string | null;
+  ledgers: Ledger[];
+  ledgerEntries: LedgerEntry[];
+  externalTasks: PortalTask[];
+};
 
 export interface Ledger {
   id: string;
@@ -130,12 +218,4 @@ export interface PortalTask {
   dueDate: string | null;
   url: string | null;
   sortOrder: number;
-}
-
-export interface CreditTracker {
-  id: string;
-  name: string;
-  amountLabel: string;
-  cadence: string;
-  detail: string;
 }

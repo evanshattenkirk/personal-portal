@@ -9,7 +9,11 @@ export async function GET(request: Request) {
   // Only same-site paths: "/trips" is fine, "@evil.com" or "//evil.com" is not.
   const requested = searchParams.get("next") ?? "/";
   const next =
-    requested.startsWith("/") && !requested.startsWith("//") ? requested : "/";
+    requested.startsWith("/") &&
+    !requested.startsWith("//") &&
+    !requested.includes("\\")
+      ? requested
+      : "/";
 
   if (code) {
     const supabase = await createClient();

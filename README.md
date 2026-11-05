@@ -1,106 +1,52 @@
-# Personal Portal
+# Evan’s Fieldbook
 
-Evan's single-user home base: trips with their bookings, points balances,
-watched deadlines, and links to his projects. Built in
-his usual stack: Next.js (App Router) + Supabase (Postgres with row-level
-security) + TypeScript + Tailwind.
+A private personal portal for travel decisions, reservations, daily plans, points, credits, deadlines, and resources. Existing URLs are preserved on Next.js + Supabase + Vercel.
 
-## Public code, private data
+## Development
 
-The code is public; the data is not. Real trips, bookings, balances and
-deadlines live only in Supabase behind row-level security and the owner's
-magic-link sign-in. `src/lib/seed.ts` and `supabase/seed.sql` hold fictional
-demo data only, and live mode never falls back to them. Keep real
-confirmation numbers and balances out of git.
-
-Sign-in is locked to one account three ways: the login form never creates
-users (`shouldCreateUser: false`), signups should be disabled in Supabase
-Auth, and `PORTAL_OWNER_EMAIL` (optional, server-only) rejects any other
-signed-in account in the proxy.
-
-## Pages
-
-| Route         | What it shows                                                        |
-| ------------- | -------------------------------------------------------------------- |
-| `/`           | Dashboard: next trip with bookings and net costs, points summary, next 5 deadlines, quick links |
-| `/trips`      | All trips with status chips (booked, researching, planning)          |
-| `/trips/[slug]` | Trip detail with a bookings table: provider, confirmations, dates, paid vs net cost, free-cancellation deadlines |
-| `/points`     | Points balances by program with as-of dates, plus Amex Gold credit trackers ($10/mo dining, $7/mo Dunkin) and the Platinum Resy credit |
-| `/deadlines`  | Watched deadlines table with due dates, countdowns, and status       |
-| `/links`      | Project cards (live products, repos, and private projects)           |
-| `/login`      | Email magic-link sign-in (Supabase Auth)                             |
-
-## Run locally
-
-```bash
-npm install
+```sh
+npm ci
 npm run dev
+npm test
+npm run build
 ```
 
-### Demo mode (no backend)
+Node 22.6+ is required for the dependency-free TypeScript test runner. Without Supabase variables, development uses an explicitly labeled demo that saves to this browser’s local storage. Production never silently falls back to sample data. `NEXT_PUBLIC_PORTAL_DEMO=1` enables an intentional deployed demo only when Supabase is absent.
 
-With no Supabase env vars, the app runs on the bundled seed data in
-`src/lib/seed.ts` (the same dataset as `supabase/seed.sql`), skips auth, and
-shows a "Demo data" badge in the header. Demo mode is on when either:
+Live mode uses the existing `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Authentication and owner row-level security remain enabled. Do not use a service-role key in the frontend.
 
-- you are running the dev server (`npm run dev`), or
-- `NEXT_PUBLIC_PORTAL_DEMO=1` is set.
+## Database rollout
 
-This is a data-layer fallback for local development only. A production build
-without Supabase env vars and without the demo flag renders a configuration
-warning instead of content; it never serves the portal unauthenticated in
-production.
+Apply migrations in order. For an existing v1 portal, apply `0004_ledgers_tasks.sql` and then `0005_fieldbook.sql` **before** deploying the new frontend. They are additive and preserve existing bookings and research. The new tables are `portal_tasks`, `trip_scenarios`, `itinerary_items`, and `credit_periods`, with owner-only RLS. Migration 0005 adds explicit states; personal scenario content stays in the database. Existing bookings default to `needs_review`; no reservation is automatically confirmed.
 
-### Live mode
+## What works
 
-Create `.env.local` (see `.env.example`):
+- Home prioritizes the next active trip by date, shared tasks, deadlines, and pinned resources.
+- Trips support creating/editing plans, comparing scenarios, selecting a direction, shortlisting research, and preserving dismissed or ruled-out options.
+- A native itinerary supports local destination times, map links, reversible removal, calendar export, and printing. Calendar times are floating; check the intended timezone in the calendar app.
+- Reservations store references, verification dates, cancellation terms and exact cutoff timestamps, cash, points, and credits. Confirmation requires both a reference and a verification date. The portal records provider transactions; it does not make bookings or cancellations.
+- Tasks and deadlines support completion, reopening, waiting, and reminder snoozing. Snoozing never changes the original deadline or hides a cancellation cutoff.
+- Wallet balances stay separate by program/owner, with freshness and trip allocation. Credits track each period’s allowance, submitted usage, pending amount, and posted credit.
+- Library supports search, categories, pins, private web destinations, and local access instructions. Local paths are copyable references, not browser-accessible file links.
 
-```
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-```
+## Architecture
 
-With those set, data comes from Supabase and every route except `/login` and
-`/auth/callback` is protected by magic-link auth (see `src/proxy.ts`).
+`src/lib/types.ts` defines records; `records.ts` validates and maps explicit allowed fields; `model.ts` contains pure date/status/money logic. `data.ts` reads authenticated Supabase data and surfaces errors. Server actions independently authenticate, check related record ownership, and persist with RLS. `PortalProvider` keeps all views consistent after successful writes, while demo mode writes only to namespaced local storage. Existing content remains in its original database tables. No email, travel provider, or credit account integrations are fabricated.
 
-## Provisioning checklist (Evan)
+The route group `(portal)` loads one authenticated snapshot under Suspense, required by this version’s Cache Components. The root login shell does not fetch private data. CSS is plain and responsive, with native dialog forms, keyboard focus, reduced-motion support, and print styles.
 
-1. **Create a Supabase project** at supabase.com (free tier is fine). Note the
-   project URL and anon key from Settings > API.
-2. **Run the migration**: paste `supabase/migrations/0001_init.sql` into the
-   SQL editor and run it. This creates `trips`, `bookings`, `deadlines`,
-   `points_balances`, and `links`, all with RLS enabled and single-user
-   owner policies (`auth.uid() = user_id`).
-3. **Create your user**: the login form never creates accounts
-   (`shouldCreateUser: false`), so add yourself in Supabase first:
-   Authentication > Users > Add user (or Invite user) with your email. Then
-   turn off new signups under Authentication > Sign In / Providers.
-4. **Seed demo data (optional)**: find your user id under Authentication >
-   Users, replace the placeholder uuid in `supabase/seed.sql`, and run it in
-   the SQL editor.
-5. **Create a GitHub repo and push** (the Muse connector cannot create
-   repos, so this step is manual):
-   ```bash
-   git init && git add -A && git commit -m "Personal portal v1"
-   git remote add origin git@github.com:evanshattenkirk/personal-portal.git
-   git push -u origin main
-   ```
-6. **Deploy on Vercel**: import the repo, set the env vars
-   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (leave
-   `NEXT_PUBLIC_PORTAL_DEMO` unset), plus `PORTAL_OWNER_EMAIL` set to your
-   login email, and deploy. Then add the Vercel domain
-   to Supabase Auth > URL Configuration (Site URL and redirect URLs) so magic
-   links land on the right host.
+## Verification
 
-No secrets live in this repo. The anon key is safe to expose in the browser
-because every table is locked down with RLS owner policies; there is no
-service-role key anywhere in the codebase.
+`npm test` covers Chicago midnight/DST dates, truthful booking states, pending versus posted credits, chronological trips, input validation, and calendar escaping. `npm run build` includes TypeScript and Next.js prerender validation. Browser QA should additionally cover live save/reload persistence, shortlist changes, modal validation, itinerary restoration, and a narrow viewport.
 
-## Layout
+Destination cover photographs are bundled from Unsplash (`photo-1507525428034-b723cf961d3e`, `photo-1438401171849-74ac270044ee`, `photo-1470770841072-f978cf4d019e`) as mood imagery rather than photographs of a booked property.
 
-- `src/lib/types.ts` and `src/lib/seed.ts`: data model and bundled seed data
-- `src/lib/data.ts`: mode detection and queries (Supabase live, seed fallback)
-- `src/lib/supabase/`: browser and server clients (`@supabase/ssr`)
-- `src/proxy.ts`: session refresh and route protection (Next.js 16 proxy,
-  formerly middleware)
-- `supabase/migrations/0001_init.sql`, `supabase/seed.sql`: schema and seed
+## Public code and the latest portal additions
+
+Real trips, balances, confirmations, and deadlines live only in Supabase. All bundled demo records are fictional. The login form has `shouldCreateUser: false`; preserve disabled signups in Supabase Auth. Set the server-only `PORTAL_OWNER_EMAIL` allowlist. The proxy, data loader, and every write action enforce it when configured. Authentication callbacks only accept safe same-origin redirects.
+
+The existing Ledgers (`/ledgers`) and Linear-backed Your List (`/todo`) are retained. These are read-only mirrors of their existing sources; the redesign never marks a Linear issue completed locally. Your own trip actions are separate records, shown alongside this work on Home. Ledger totals remain the recorded reconciled figures, without assuming that itemized entries are complete.
+
+For an existing portal with `0004_ledgers_tasks.sql`, the next schema migration is `0005_fieldbook.sql`. Backfill of private planning content, if needed, belongs in the authenticated database rather than a public migration or fixture.
+
+The optional server-only `TREK_URL` setting from the TREK-link branch is preserved. It adds an HTTPS link inside the authenticated Trips page without publishing the private hostname in source. The native itinerary and external TREK instance are not automatically synchronized.

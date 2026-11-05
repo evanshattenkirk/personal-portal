@@ -1,41 +1,67 @@
+"use client";
 import Link from "next/link";
-import { isDemoMode } from "@/lib/data";
-
+import { usePathname } from "next/navigation";
+import { Icon } from "./Kit";
 const items = [
-  { href: "/", label: "Dashboard" },
-  { href: "/trips", label: "Trips" },
-  { href: "/points", label: "Points" },
-  { href: "/deadlines", label: "Deadlines" },
-  { href: "/todo", label: "To-Do" },
-  { href: "/ledgers", label: "Ledgers" },
-  { href: "/links", label: "Links" },
+  ["/", "Home", "home"],
+  ["/trips", "Trips", "plane"],
+  ["/points", "Wallet", "wallet"],
+  ["/ledgers", "Ledgers", "wallet"],
+  ["/todo", "Your list", "clock"],
+  ["/deadlines", "Actions", "check"],
+  ["/links", "Library", "link"],
 ];
-
-export default function Nav() {
-  const demo = isDemoMode();
+export default function Nav({ demo = false }: { demo?: boolean }) {
+  const path = usePathname();
   return (
-    <header className="border-b border-zinc-800 bg-zinc-950/80">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-        <Link href="/" className="text-sm font-bold tracking-tight text-zinc-50">
-          Evan&apos;s Portal
+    <header className="site-header">
+      <div className="nav-wrap">
+        <Link href="/" className="brand">
+          <span className="brand-mark">
+            <Icon size={24} />
+          </span>
+          <span>
+            Evan’s <b>fieldbook</b>
+            <small>PLANS, PLACES & EVERYDAY LIFE</small>
+          </span>
         </Link>
-        <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          {items.map((item) => (
+        <nav aria-label="Main navigation">
+          {items.map(([href, label, icon]) => (
             <Link
-              key={item.href}
-              href={item.href}
-              className="text-zinc-400 transition-colors hover:text-zinc-100"
+              key={href}
+              href={href}
+              className={
+                (href === "/" ? path === href : path.startsWith(href))
+                  ? "active"
+                  : ""
+              }
+              aria-current={
+                (href === "/" ? path === href : path.startsWith(href))
+                  ? "page"
+                  : undefined
+              }
             >
-              {item.label}
+              <Icon name={icon} size={18} />
+              {label}
             </Link>
           ))}
         </nav>
-        {demo ? (
-          <span className="ml-auto rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-0.5 text-[11px] font-medium text-amber-300">
-            Demo data
-          </span>
-        ) : null}
+        <span
+          className="profile-dot"
+          title={
+            demo
+              ? "Demo · saved only in this browser"
+              : "Private personal portal"
+          }
+        >
+          {demo ? "D" : "E"}
+        </span>
       </div>
+      {demo && (
+        <div className="demo-banner">
+          Demo fieldbook · changes save in this browser only
+        </div>
+      )}
     </header>
   );
 }
