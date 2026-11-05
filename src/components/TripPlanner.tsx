@@ -252,8 +252,8 @@ export default function TripPlanner({ slug }: { slug: string }) {
       </div>
       <section className="hero">
         <img className="hero-photo" src={cover(slug)} alt="" />
+        <div className="hero-stamp">{tripWhen(trip)}</div>
         <div className="hero-content">
-          <span className="hero-stamp">{tripWhen(trip)}</span>
           <span className="eyebrow">
             {trip.destination} · {trip.travelers ?? "?"} travelers
           </span>
@@ -271,7 +271,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
           <div className="readiness">
             {readiness.map((r) => (
               <span
-                className={`badge ${r.status === "Confirmed" ? "success" : r.status === "Not recorded" ? "neutral" : "warning"}`}
+                className={`badge ${r.status === "Confirmed" ? "success" : "warning"}`}
                 key={r.kind}
               >
                 {r.label}: {r.status}
@@ -299,7 +299,10 @@ export default function TripPlanner({ slug }: { slug: string }) {
         <>
           <div className="grid-two">
             <section className="card">
-              <h2>{selected ? "Chosen direction" : "Plan"}</h2>
+              <span className="eyebrow">The shape of your trip</span>
+              <h2>
+                {selected ? "Your chosen direction" : "A plan taking shape"}
+              </h2>
               <p className="page-intro" style={{ whiteSpace: "pre-wrap" }}>
                 {selected?.summary ??
                   trip.notes ??
@@ -319,7 +322,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
               </div>
             </section>
             <section className="card">
-              <h2>Next steps</h2>
+              <span className="eyebrow">Next little steps</span>
               {tasks.slice(0, 3).map((t) => (
                 <div className="action-row" key={t.id}>
                   <Action
@@ -377,7 +380,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
             </div>
           )}
           <SectionTitle
-            title="Ideas"
+            title="A few things to look forward to"
             action={
               <button className="text-link" onClick={() => go("options")}>
                 All ideas →
@@ -404,7 +407,8 @@ export default function TripPlanner({ slug }: { slug: string }) {
       {tab === "options" && (
         <>
           <SectionTitle
-            title="Options"
+            eyebrow="One getaway, a few possibilities"
+            title="Choose your direction"
             action={
               <button
                 className="button secondary"
@@ -526,7 +530,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
             </details>
           )}
           <SectionTitle
-            title="Idea collection"
+            title="The idea collection"
             action={
               <button className="button" onClick={() => add("suggestions")}>
                 + Add idea
@@ -735,7 +739,7 @@ export default function TripPlanner({ slug }: { slug: string }) {
       {tab === "itinerary" && (
         <>
           <SectionTitle
-            title="Itinerary"
+            title="Make a little room for each day"
             action={
               <button
                 className="button"

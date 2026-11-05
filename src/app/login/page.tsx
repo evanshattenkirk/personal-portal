@@ -32,7 +32,8 @@ function LoginForm() {
 
   return (
     <section className="card" style={{ maxWidth: 460, margin: "60px auto" }}>
-      <h1>Sign in</h1>
+      <span className="eyebrow">Your personal portal</span>
+      <h1>Welcome back.</h1>
       <p className="page-intro">
         Sign in with your email to pick up your plans.
       </p>

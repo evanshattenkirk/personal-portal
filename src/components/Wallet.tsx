@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePortal } from "./PortalProvider";
 import { EntityEditor, newRecord } from "./Editors";
-import { Empty, SectionTitle } from "./Kit";
+import { Empty, Icon, SectionTitle } from "./Kit";
 import { daysUntil, fmtDate, fmtMoney, fmtPoints, todayISO } from "@/lib/model";
 import type { EntityName } from "@/lib/types";
 export default function Wallet() {
@@ -22,8 +22,12 @@ export default function Wallet() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Wallet</h1>
-          <p className="page-intro">Balances and card credits.</p>
+          <span className="eyebrow">Make the most of what you have</span>
+          <h1>Your travel wallet.</h1>
+          <p className="page-intro">
+            Different currencies. Real possibilities. Keep balances fresh and
+            credits accounted for.
+          </p>
         </div>
         <button
           className="button"
@@ -37,16 +41,20 @@ export default function Wallet() {
       <div className="grid-three">
         {p.points.map((b) => (
           <article className="card" key={b.id}>
+            <div className="card-header">
+              <span className="eyebrow">{b.owner}’s account</span>
+              <Icon name="wallet" />
+            </div>
             <h3>{b.program}</h3>
             <div className="balance-number">
               {b.approximate ? "~" : ""}
               {fmtPoints(b.balance)}
             </div>
-            <p className="meta">
-              {b.owner} · points · checked {fmtDate(b.asOf)}
+            <p className="muted" style={{ fontSize: 12 }}>
+              points · checked {fmtDate(b.asOf)}
             </p>
             {daysUntil(b.asOf) < -30 && (
-              <span className="badge warning">
+              <span className="badge warning" style={{ marginTop: 12 }}>
                 Time for a balance check
               </span>
             )}
@@ -94,10 +102,11 @@ export default function Wallet() {
         </Empty>
       )}
       <SectionTitle
-        title="Credits"
+        eyebrow="Use it, track it, enjoy it"
+        title="Credits, without the guesswork"
         action={
           <button
-            className="button secondary"
+            className="button"
             onClick={() =>
               setEditor({ entity: "credits", record: newRecord("credits") })
             }
@@ -119,17 +128,18 @@ export default function Wallet() {
         >
           Past periods
         </button>
-        <span className="meta">
+        <span className="muted" style={{ fontSize: 11 }}>
           Pending means eligible spend recorded, credit not yet received.
         </span>
       </div>
       <div className="grid-three">
         {credits.map((c) => (
           <article key={c.id} className="card">
+            <span className="eyebrow">{c.period}</span>
             <h3>{c.name}</h3>
             <div className="balance-number">{fmtMoney(c.limit - c.used)}</div>
-            <p className="meta">
-              {c.period} · remaining · ends {fmtDate(c.resetDate)}
+            <p className="muted" style={{ fontSize: 12 }}>
+              allowance remaining · ends {fmtDate(c.resetDate)}
             </p>
             <div className="progress-track">
               <span
@@ -189,8 +199,9 @@ export default function Wallet() {
           assumed.
         </Empty>
       )}
-      <section className="card spaced">
-        <h3>Previously noted credit programs</h3>
+      <section className="card" style={{ marginTop: 25 }}>
+        <span className="eyebrow">A useful place to start</span>
+        <h3>Your previously noted credit programs</h3>
         <p className="page-intro">
           These are historical notes, not verified current benefit terms. Check
           your account before creating the current period.

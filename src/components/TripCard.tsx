@@ -15,8 +15,8 @@ export function TripCard({ trip }: { trip: Trip }) {
     <Link href={`/trips/${trip.slug}`} className="trip-card">
       <div className="trip-image">
         <img src={cover(trip.slug)} alt="" />
+        <span className="badge">{tripWhen(trip)}</span>
       </div>
-      <span className="trip-when">{tripWhen(trip)}</span>
       <div className="trip-card-body">
         <h3>{trip.name}</h3>
         <p>
@@ -30,7 +30,7 @@ export function TripCard({ trip }: { trip: Trip }) {
             .slice(0, 2)
             .map((r) => (
               <span
-                className={`badge ${r.status === "Confirmed" ? "success" : r.status === "Not recorded" ? "neutral" : "warning"}`}
+                className={`badge ${r.status === "Confirmed" ? "success" : "warning"}`}
                 key={r.kind}
               >
                 {r.label} · {r.status}
@@ -41,7 +41,7 @@ export function TripCard({ trip }: { trip: Trip }) {
           <span>
             {tasks.length
               ? `${tasks.length} next ${tasks.length === 1 ? "step" : "steps"}`
-              : "Open"}
+              : "Open your plans"}
           </span>
           <Icon name="arrow" size={17} />
         </div>
