@@ -91,7 +91,11 @@ export default function TripChat({
     [kind, setKind] = useState<TripNote["kind"]>("ask_ai"),
     [files, setFiles] = useState<File[]>([]),
     [showAll, setShowAll] = useState(false),
-    [fileError, setFileError] = useState("");
+    [fileError, setFileError] = useState(""),
+    [thinking, setThinking] = useState<"" | "chat" | "research">(""),
+    [askError, setAskError] = useState(""),
+    [askInfo, setAskInfo] = useState("");
+  const instant = Boolean(p.instantReplies) && !p.demo;
   const input = useRef<HTMLInputElement>(null);
   const shown = showAll ? thread : thread.slice(-12);
   const unread = thread.filter((n) => !isEvan(n) && n.status === "open");
@@ -141,6 +145,20 @@ export default function TripChat({
     return paths.join("\n");
   };
 
+  const ask = async (research?: boolean) => {
+    setAskError("");
+    setAskInfo("");
+    setThinking(research ? "research" : "chat");
+    try {
+      const message = await p.ask(slug, research);
+      if (message) setAskInfo(message);
+    } catch (e) {
+      setAskError(e instanceof Error ? e.message : "Claude couldn't reply.");
+    } finally {
+      setThinking("");
+    }
+  };
+
   const send = async () => {
     if (!draft.trim() && !files.length)
       throw new Error("Write a note or attach a screenshot first.");
@@ -154,6 +172,8 @@ export default function TripChat({
     setDraft("");
     setFiles([]);
     if (input.current) input.current.value = "";
+    // Reply right away on Evan's API key. Preferences are just remembered.
+    if (instant && kind !== "preference") void ask();
   };
 
   return (
@@ -176,9 +196,12 @@ export default function TripChat({
         )}
       </div>
       <p className="page-intro">
-        Type notes, questions, or requests and attach screenshots. Your AI
-        checks once a day, replies here, and puts anything that would change the
-        plan in a proposal for you to confirm.
+        Type notes, questions, or requests and attach screenshots.{" "}
+        {instant
+          ? "Claude replies here in a few seconds, and a daily check catches anything left open."
+          : "Your AI checks once a day and replies here."}{" "}
+        Anything that would change the plan comes as a proposal for you to
+        confirm.
       </p>
       <div className="chat-log">
         {thread.length > shown.length && (
@@ -244,6 +267,24 @@ export default function TripChat({
             )}
           </article>
         ))}
+        {thinking && (
+          <article className="chat-bubble theirs">
+            <div className="chat-meta">
+              <strong>Claude</strong>
+            </div>
+            <p className="muted">
+              {thinking === "research"
+                ? "Looking it up on the web… this can take up to a minute."
+                : "Typing…"}
+            </p>
+          </article>
+        )}
+        {askError && <p className="notice warning">{askError}</p>}
+        {askInfo && (
+          <p className="muted" style={{ fontSize: 12 }}>
+            {askInfo}
+          </p>
+        )}
         {!thread.length && ready && (
           <p className="muted" style={{ fontSize: 12 }}>
             Nothing yet. Your first note starts the conversation.
@@ -310,9 +351,7 @@ export default function TripChat({
           <Action className="button" onClick={send}>
             Send
           </Action>
-          <label
-            className={`button secondary ${!canAttach ? "disabled" : ""}`}
-          >
+          <label className={`button secondary ${!canAttach ? "disabled" : ""}`}>
             Attach screenshots
             <input
               ref={input}
@@ -324,6 +363,25 @@ export default function TripChat({
               onChange={(e) => pick(e.target.files)}
             />
           </label>
+          {instant && evanOpen.length > 0 && !thinking && (
+            <>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => ask(false)}
+              >
+                Reply now
+              </button>
+              <button
+                type="button"
+                className="button ghost"
+                title="Uses a bigger model with web search (about 10-25¢)"
+                onClick={() => ask(true)}
+              >
+                Look it up
+              </button>
+            </>
+          )}
           <span className="muted" style={{ fontSize: 11, alignSelf: "center" }}>
             Paste images straight in · ⌘/Ctrl + Enter sends
           </span>

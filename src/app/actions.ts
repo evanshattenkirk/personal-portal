@@ -201,3 +201,29 @@ export async function decideProposal(
     };
   }
 }
+
+/** Asks Claude (on Evan's API key) to reply to this trip's open notes now. */
+export async function askAssistant(tripSlug: string, research?: boolean) {
+  try {
+    if (typeof tripSlug !== "string" || !/^[a-z0-9-]{1,80}$/.test(tripSlug))
+      throw new Error("Invalid trip.");
+    await ownerSession();
+    const { replyInPortal } = await import("@/lib/assistant");
+    const result = await replyInPortal(tripSlug, {
+      research: typeof research === "boolean" ? research : undefined,
+    });
+    return { ...result, error: null };
+  } catch (error) {
+    if (!(error instanceof Error && "status" in error))
+      console.error("Assistant reply failed", error);
+    return {
+      saved: [],
+      model: null,
+      message: null,
+      error:
+        error instanceof Error && "status" in error
+          ? error.message
+          : "Claude couldn't reply just now. Try again in a minute.",
+    };
+  }
+}

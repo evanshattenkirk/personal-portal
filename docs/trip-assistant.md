@@ -31,6 +31,21 @@ If you can't reach the portal over HTTPS but you do have the portal's Supabase
 project connected, you can read and write the same tables directly (see
 "Tables" below). Write with the owner's `user_id`, and follow the same rules.
 
+## Instant replies in the portal
+
+When `ANTHROPIC_API_KEY` is set in Vercel, the portal replies to a note as soon
+as Evan sends it (`src/lib/assistant.ts`), as author `claude` with source
+`portal-chat` or `portal-research`. Everyday replies use Claude Haiku 5.5 with
+thinking off. A note that asks for prices, events or deals, or a tap on
+**Look it up**, goes to Claude Sonnet 5.5 with up to 4 web searches. Replies go
+through the same `agentPost` checks as the API below, and there's a daily cap
+(`ASSISTANT_DAILY_CAP`, default 60). Override models with
+`ASSISTANT_CHAT_MODEL` / `ASSISTANT_RESEARCH_MODEL`.
+
+The daily check below still runs and picks up any note left open, so
+assistants should skip notes that already have a reply after them in
+`recentConversation`.
+
 ## The daily check (notes)
 
 Run once a day.
