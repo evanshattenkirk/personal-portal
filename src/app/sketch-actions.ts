@@ -100,7 +100,7 @@ export async function drawSketch(optionId: string, fresh = false) {
     const brief = briefRow ? (fromRow("briefs", briefRow) as TripBrief) : null;
     if (!isTripOption(option, trip, brief))
       throw new Error("Sample itineraries are for whole-trip options.");
-    const hash = sketchHash(option, brief);
+    const hash = sketchHash(option, brief, trip);
 
     let stored = true;
     const { data: cached, error: readError } = await db

@@ -136,6 +136,9 @@ test("hash changes with the option or the brief", () => {
   assert.equal(a, sketchHash({ ...virgin }, brief));
   assert.notEqual(a, sketchHash({ ...virgin, subtitle: "Apr 12-17" }, brief));
   assert.notEqual(a, sketchHash(virgin, { ...brief, avoid: "Cruises" }));
+  const b = sketchHash(virgin, brief, trip);
+  assert.notEqual(b, sketchHash(virgin, brief, { ...trip, travelers: 8 }));
+  assert.notEqual(b, sketchHash(virgin, brief, { ...trip, startDate: "2027-04-20" }));
 });
 
 test("keeps one emoji and drops text", () => {
@@ -240,4 +243,13 @@ test("strips emoji from titles and copies a compare as text", () => {
 test("tags can force a preview on or off", () => {
   assert.ok(isTripOption(idea({ title: "Somewhere", tags: "trip option" }), trip, brief));
   assert.ok(!isTripOption({ ...virgin, tags: "Cruise, no preview" }, trip, brief));
+});
+
+test("an option's stated nights beat the trip's dates", () => {
+  const dated = { ...trip, startDate: "2027-04-16", endDate: "2027-04-21" };
+  const f = sketchFrame(idea({ title: "Carnival 3-night cruise", category: "stay" }), dated, brief);
+  assert.equal(f.nights, 3);
+  assert.equal(f.start, "2027-04-16");
+  assert.equal(f.end, "2027-04-19");
+  assert.equal(sketchFrame(idea({ title: "Beach house", category: "stay" }), dated, brief).nights, 5);
 });

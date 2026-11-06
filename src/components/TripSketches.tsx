@@ -153,8 +153,8 @@ export function SketchProvider({
   const running = useRef(0);
   const optionsRef = useLatest(options);
   const hashes = useMemo(
-    () => Object.fromEntries(options.map((o) => [o.id, sketchHash(o, brief)])),
-    [options, brief],
+    () => Object.fromEntries(options.map((o) => [o.id, sketchHash(o, brief, trip)])),
+    [options, brief, trip],
   );
   const hashesRef = useLatest(hashes);
   const hashKey = Object.entries(hashes)

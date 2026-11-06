@@ -131,7 +131,7 @@ export async function drawSketchWithAI(
     return normalizeSketch(raw, {
       optionId: option.id,
       tripSlug: option.tripSlug,
-      hash: sketchHash(option, brief),
+      hash: sketchHash(option, brief, trip),
       nights: frame.nights,
       start: frame.start,
       end: frame.end,

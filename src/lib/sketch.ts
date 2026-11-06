@@ -143,16 +143,20 @@ export function sketchFrame(
     const nights = Math.min(nightsBetween(range.start, range.end), 7);
     return { nights, start: range.start, end: addDays(range.start, nights) };
   }
+  // An option's own stated length beats the trip's dates: a "3-night cruise"
+  // on a 5-night trip should sketch (and compare) as 3 nights.
+  const stated = optionText(s).match(/\b(\d{1,2})[- ]nights?\b/i);
   if (trip.startDate && trip.endDate) {
     const n = nightsBetween(trip.startDate, trip.endDate);
-    if (n >= 1 && n <= 14)
+    if (n >= 1 && n <= 14) {
+      const nights = Math.max(1, Math.min(stated ? Number(stated[1]) : n, 7));
       return {
-        nights: Math.min(n, 7),
+        nights,
         start: trip.startDate,
-        end: addDays(trip.startDate, Math.min(n, 7)),
+        end: addDays(trip.startDate, nights),
       };
+    }
   }
-  const stated = optionText(s).match(/\b(\d{1,2})[- ]nights?\b/i);
   const fromBrief = (brief?.nights ?? "").match(/\d+/g)?.map(Number) ?? [];
   const n = stated
     ? Number(stated[1])
@@ -189,8 +193,19 @@ export function isTripOption(
 }
 
 /** Small stable hash, so a sketch is redrawn only when its inputs change. */
-export function sketchHash(s: Suggestion, brief?: TripBrief | null) {
+export function sketchHash(
+  s: Suggestion,
+  brief?: TripBrief | null,
+  trip?: Trip | null,
+) {
   const input = [
+    trip?.name,
+    trip?.destination,
+    trip?.startDate,
+    trip?.endDate,
+    trip?.dateLabel,
+    trip?.travelers,
+    trip?.notes,
     s.title,
     s.subtitle,
     s.detail,
@@ -203,7 +218,7 @@ export function sketchHash(s: Suggestion, brief?: TripBrief | null) {
     brief?.vibes,
     brief?.avoid,
     brief?.mustHaves,
-    "v1",
+    "v2",
   ]
     .map((v) => v ?? "")
     .join("␟");
@@ -487,7 +502,7 @@ export function quickSketch(
   return normalizeSketch(raw, {
     optionId: s.id,
     tripSlug: s.tripSlug,
-    hash: sketchHash(s, brief),
+    hash: sketchHash(s, brief, trip),
     nights: frame.nights,
     start: frame.start,
     end: frame.end,
