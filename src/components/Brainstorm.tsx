@@ -6,6 +6,14 @@ import { newRecord } from "./Editors";
 import TripChat from "./TripChat";
 import Proposals from "./Proposals";
 import {
+  CompareCheck,
+  OptionTitle,
+  SketchHint,
+  SketchNotices,
+  SketchProvider,
+} from "./TripSketches";
+import { isTripOption } from "@/lib/sketch";
+import {
   buildAIBrief,
   hasTag,
   parseAIIdeas,
@@ -109,6 +117,9 @@ export default function Brainstorm({
     });
     setQuick("");
   };
+
+  const options = suggestions.filter((s) => isTripOption(s, trip, brief));
+  const optionIds = new Set(options.map((o) => o.id));
 
   const lanes = [
     ...styles.map((style) => ({
@@ -215,6 +226,12 @@ export default function Brainstorm({
         </section>
       </div>
 
+      <SketchProvider
+        trip={trip}
+        brief={brief}
+        options={options}
+        onEdit={onEdit}
+      >
       <SectionTitle
         eyebrow="The brainstorm board"
         title="Ideas by trip style"
@@ -224,6 +241,8 @@ export default function Brainstorm({
           </button>
         }
       />
+      <SketchHint />
+      <SketchNotices />
       <div className="toolbar">
         <input
           aria-label="Quick idea"
@@ -276,15 +295,30 @@ export default function Brainstorm({
                 <span className="badge neutral">{lane.items.length}</span>
               </div>
               {lane.items.map((s) => (
-                <div className="mini-row" key={s.id}>
-                  <span>
-                    <strong>{s.title}</strong>
-                    <small>
-                      {[s.category, s.priceLabel, s.subtitle]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </small>
-                  </span>
+                <div
+                  className={`mini-row${optionIds.has(s.id) ? " has-sketch" : ""}`}
+                  key={s.id}
+                >
+                  {optionIds.has(s.id) ? (
+                    <>
+                      <CompareCheck option={s} />
+                      <OptionTitle
+                        option={s}
+                        meta={[s.category, s.priceLabel, s.subtitle]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      />
+                    </>
+                  ) : (
+                    <span>
+                      <strong>{s.title}</strong>
+                      <small>
+                        {[s.category, s.priceLabel, s.subtitle]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </small>
+                    </span>
+                  )}
                   <span style={{ display: "flex", gap: 4 }}>
                     <Action
                       className="button small ghost"
@@ -325,6 +359,7 @@ export default function Brainstorm({
           options&rdquo; and paste the reply back in.
         </Empty>
       )}
+      </SketchProvider>
       <details className="brief-handoff" style={{ marginTop: 28 }}>
         <summary className="section-title" style={{ cursor: "pointer" }}>
           <div>
