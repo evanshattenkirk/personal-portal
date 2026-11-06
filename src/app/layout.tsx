@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Nav from "@/components/Nav";
 import { BRAND } from "@/components/brand";
 import { isDemoMode } from "@/lib/data";
@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   title: { default: BRAND, template: `%s · ${BRAND}` },
   description:
     "A personal home for trips, next steps, points, and the places worth going.",
+};
+// "cover" lets fixed bars and sheets use the safe-area insets on notched phones.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 export default function RootLayout({
   children,
