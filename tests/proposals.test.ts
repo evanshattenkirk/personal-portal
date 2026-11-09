@@ -48,3 +48,23 @@ test("note attachments must be private storage paths", () => {
   assert.throws(() => validateRecord("notes", { ...base, attachments: "../../etc/passwd" }), /attachment/);
   assert.throws(() => validateRecord("notes", { ...base, attachments: "https://evil.example/x.png" }), /attachment/);
 });
+
+test("duplicate ideas are dropped against the trip and within one proposal", async () => {
+  const { dropDuplicateIdeas, normalizeTitle } = await import("../src/lib/proposals.ts");
+  assert.equal(normalizeTitle("Grand Hyatt — Deer Valley!"), "grand hyatt deer valley");
+  const changes = parseChanges([
+    { op: "create", entity: "suggestions", record: { title: "Grand Hyatt Deer Valley", category: "stay" } },
+    { op: "create", entity: "suggestions", record: { title: "Hyatt Regency Lake Tahoe", category: "stay" } },
+    { op: "create", entity: "suggestions", record: { title: "hyatt regency lake tahoe", category: "stay" } },
+    { op: "create", entity: "suggestions", record: { title: "Old dismissed pick", category: "stay" } },
+    { op: "create", entity: "tasks", record: { title: "Grand Hyatt Deer Valley" } },
+  ]);
+  const existing = [
+    { tripSlug: "december-getaway", title: "grand hyatt deer valley", status: "suggested" },
+    { tripSlug: "december-getaway", title: "Old dismissed pick", status: "dismissed" },
+    { tripSlug: "cancun", title: "Hyatt Regency Lake Tahoe", status: "suggested" },
+  ];
+  const { kept, dropped } = dropDuplicateIdeas(changes, existing, "december-getaway");
+  assert.deepEqual(dropped, ["Grand Hyatt Deer Valley", "hyatt regency lake tahoe"]);
+  assert.equal(kept.length, 3); // Tahoe once (other trip doesn't count), dismissed pick, the task
+});

@@ -2,7 +2,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { fromRow, tables, toRow, validateRecord } from "@/lib/records";
 import { isSupabaseConfigured, isPortalOwner } from "@/lib/data";
-import { parseChanges, resolveChange } from "@/lib/proposals";
+import {
+  dropDuplicateIdeas,
+  parseChanges,
+  resolveChange,
+} from "@/lib/proposals";
 import type { EntityName } from "@/lib/types";
 type DB = Awaited<ReturnType<typeof createClient>>;
 async function ownerSession() {
@@ -123,7 +127,21 @@ export async function decideProposal(
       throw new Error("This proposal was already decided.");
     const saved: { entity: EntityName; record: unknown }[] = [];
     if (decision === "accepted") {
-      const changes = parseChanges(proposal.changes);
+      // Skip ideas the trip already has, e.g. when two assistants proposed
+      // the same hotel and both proposals get confirmed.
+      const { data: ideaRows } = await db
+        .from("trip_suggestions")
+        .select("trip_slug, title, status")
+        .eq("user_id", user.id);
+      const { kept: changes } = dropDuplicateIdeas(
+        parseChanges(proposal.changes),
+        (ideaRows ?? []).map((r) => ({
+          tripSlug: r.trip_slug as string | null,
+          title: r.title,
+          status: r.status,
+        })),
+        proposal.tripSlug,
+      );
       // Resolve and validate everything first so a bad change saves nothing.
       const resolved = [];
       for (const change of changes) {
