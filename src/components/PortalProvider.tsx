@@ -10,7 +10,11 @@ import {
 import type { EntityMap, EntityName, PortalData } from "@/lib/types";
 import { askAssistant, decideProposal, saveRecord } from "@/app/actions";
 import { validateRecord } from "@/lib/records";
-import { parseChanges, resolveChange } from "@/lib/proposals";
+import {
+  dropDuplicateIdeas,
+  parseChanges,
+  resolveChange,
+} from "@/lib/proposals";
 type Context = PortalData & {
   ready: boolean;
   save: <K extends EntityName>(
@@ -98,7 +102,11 @@ export default function PortalProvider({
       throw new Error("This proposal was already decided.");
     const updates: { entity: EntityName; record: { id: string } }[] = [];
     if (decision === "accepted")
-      for (const change of parseChanges(proposal.changes)) {
+      for (const change of dropDuplicateIdeas(
+        parseChanges(proposal.changes),
+        current.current.suggestions,
+        proposal.tripSlug,
+      ).kept) {
         const rows = current.current[change.entity] as unknown as Record<
           string,
           unknown

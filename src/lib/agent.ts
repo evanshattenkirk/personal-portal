@@ -11,7 +11,12 @@ import {
   toRow,
   validateRecord,
 } from "./records";
-import { parseChanges, proposalKinds } from "./proposals";
+import {
+  dropDuplicateIdeas,
+  normalizeTitle,
+  parseChanges,
+  proposalKinds,
+} from "./proposals";
 import type { EntityName } from "./types";
 
 // Server-only access for assistants (Claude, Muse, Duet…). Every request needs
@@ -146,8 +151,17 @@ export async function agentInbox() {
         ideas: byTrip(suggestions, trip.slug).filter(
           (s) => s.status !== "dismissed",
         ),
+        // A dismissed duplicate isn't "ruled out" while its twin is still live.
         ruledOut: byTrip(suggestions, trip.slug)
-          .filter((s) => s.status === "dismissed")
+          .filter(
+            (s) =>
+              s.status === "dismissed" &&
+              !byTrip(suggestions, trip.slug).some(
+                (o) =>
+                  o.status !== "dismissed" &&
+                  normalizeTitle(o.title) === normalizeTitle(s.title),
+              ),
+          )
           .map((s) => s.title),
         itinerary: byTrip(itinerary, trip.slug).filter(
           (i) => i.status !== "removed",
@@ -237,6 +251,31 @@ export async function agentPost(input: unknown) {
       throw new AgentError(`${where}: unknown tripSlug ${String(slug)}.`);
     return slug;
   };
+  // Withdraw first, so a replacement can reuse the withdrawn proposal's title.
+  const withdrawIds = list("withdrawProposalIds", 40).map(String);
+  const [{ data: ideaRows, error: ideaError }, { data: pendingRows, error: pendingError }] =
+    await Promise.all([
+      db.from("trip_suggestions").select("trip_slug, title, status").eq("user_id", uid),
+      db
+        .from("trip_proposals")
+        .select("id, trip_slug, title")
+        .eq("user_id", uid)
+        .eq("status", "pending"),
+    ]);
+  if (ideaError || pendingError)
+    throw new AgentError("Could not read existing ideas and proposals.", 500);
+  const ideas = (ideaRows ?? []).map((r) => ({
+    tripSlug: r.trip_slug as string | null,
+    title: r.title as string,
+    status: r.status as string,
+  }));
+  const withdrawSet = new Set(withdrawIds);
+  const pendingKeys = new Set(
+    (pendingRows ?? [])
+      .filter((r) => !withdrawSet.has(r.id as string))
+      .map((r) => `${r.trip_slug ?? ""}|${normalizeTitle(r.title)}`),
+  );
+  const skipped: string[] = [];
   const messages = list("messages", 40).map((m, i) => {
     try {
       return validateRecord("notes", {
@@ -254,16 +293,32 @@ export async function agentPost(input: unknown) {
       throw new AgentError(`messages[${i}]: ${(e as Error).message}`);
     }
   });
-  const proposals = list("proposals", 40).map((p, i) => {
+  const proposals = list("proposals", 40).flatMap((p, i) => {
     try {
       const kind = String(p.kind ?? "info");
       if (!(proposalKinds as readonly string[]).includes(kind))
         throw new Error(`kind must be one of ${proposalKinds.join(", ")}.`);
-      const changes = parseChanges(p.changes ?? []);
+      const tripSlug = checkTrip(p.tripSlug, `proposals[${i}]`, true);
+      const title = str(p.title, 200) ?? "";
+      // The same proposal twice (a re-run, or two assistants) is skipped.
+      const key = `${tripSlug ?? ""}|${normalizeTitle(title)}`;
+      if (pendingKeys.has(key)) {
+        skipped.push(`proposals[${i}] "${title}": already pending`);
+        return [];
+      }
+      pendingKeys.add(key);
+      const parsed = parseChanges(p.changes ?? []);
+      const { kept: changes, dropped } = dropDuplicateIdeas(parsed, ideas, tripSlug);
+      for (const d of dropped)
+        skipped.push(`proposals[${i}] idea "${d}": already on the trip`);
+      if (parsed.length && !changes.length) {
+        skipped.push(`proposals[${i}] "${title}": every idea in it is already on the trip`);
+        return [];
+      }
       return validateRecord("proposals", {
         id: crypto.randomUUID(),
-        tripSlug: checkTrip(p.tripSlug, `proposals[${i}]`, true),
-        title: str(p.title, 200) ?? "",
+        tripSlug,
+        title,
         body: str(p.body, 8000),
         kind,
         changes: changes.length ? JSON.stringify(changes) : null,
@@ -293,6 +348,20 @@ export async function agentPost(input: unknown) {
     if (error) throw new AgentError(`Could not save ${tables[entity]}.`, 500);
     return (data ?? []).map((r) => fromRow(entity, r) as { id: string });
   };
+  let withdrawn: string[] = [];
+  if (withdrawIds.length) {
+    // Only proposals an assistant wrote that Evan hasn't decided yet.
+    const { data, error } = await db
+      .from("trip_proposals")
+      .delete()
+      .eq("user_id", uid)
+      .eq("status", "pending")
+      .neq("author", "evan")
+      .in("id", withdrawIds)
+      .select("id");
+    if (error) throw new AgentError("Could not withdraw proposals.", 500);
+    withdrawn = (data ?? []).map((r) => r.id as string);
+  }
   const savedMessages = await insert("notes", messages);
   const savedProposals = await insert("proposals", proposals);
   let handledNotes: { id: string }[] = [];
@@ -311,6 +380,8 @@ export async function agentPost(input: unknown) {
     messageIds: savedMessages.map((r) => r.id),
     proposalIds: savedProposals.map((r) => r.id),
     handledCount: handledNotes.length,
+    withdrawnProposalIds: withdrawn,
+    skipped,
     saved: [
       ...savedMessages.map((record) => ({ entity: "notes" as const, record })),
       ...savedProposals.map((record) => ({

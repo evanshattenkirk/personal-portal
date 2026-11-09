@@ -99,6 +99,51 @@ export function parseChanges(raw: unknown): ProposalChange[] {
   });
 }
 
+/** Lowercase letters and digits only, so "Grand Hyatt — Deer Valley" matches "grand hyatt deer valley". */
+export function normalizeTitle(title: unknown) {
+  return String(title ?? "")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+type IdeaLike = { tripSlug?: string | null; title?: unknown; status?: unknown };
+
+/**
+ * Drops idea creates that repeat an idea the trip already has (same title,
+ * not dismissed), or that repeat each other. Two assistants proposing the
+ * same hotel, both confirmed, used to leave two copies on the board.
+ */
+export function dropDuplicateIdeas(
+  changes: ProposalChange[],
+  existing: IdeaLike[],
+  tripSlug: string | null,
+) {
+  const seen = new Set(
+    existing
+      .filter((s) => s.status !== "dismissed")
+      .map((s) => `${s.tripSlug ?? ""}|${normalizeTitle(s.title)}`),
+  );
+  const kept: ProposalChange[] = [];
+  const dropped: string[] = [];
+  for (const c of changes) {
+    if (c.op === "create" && c.entity === "suggestions") {
+      const trip = (c.record.tripSlug as string | null | undefined) ?? tripSlug;
+      const title = normalizeTitle(c.record.title);
+      const key = `${trip ?? ""}|${title}`;
+      if (title && seen.has(key)) {
+        dropped.push(String(c.record.title));
+        continue;
+      }
+      seen.add(key);
+    }
+    kept.push(c);
+  }
+  return { kept, dropped };
+}
+
 /** Builds the full record a change will save, given the existing one for updates. */
 export function resolveChange(
   change: ProposalChange,

@@ -64,6 +64,21 @@ Run once a day.
    Evan, and ask him in your reply.
 6. If there's nothing new, post nothing. Don't send "no updates" messages.
 
+### Avoiding duplicates
+
+Before you propose anything, check the trip's `proposals` (pending ones are
+still waiting on Evan) and `ideas`. Don't propose an idea the trip already
+has: update the existing one instead (`op: "update"` with its `id`).
+
+When Evan narrows down one of your pending proposals (say he picks one of two
+dates), post the narrower proposal and withdraw the old one in the same
+request with `withdrawProposalIds`. Don't leave both for him to sort out.
+
+The API also guards against this. A proposal whose title matches one already
+pending on the same trip is skipped. An idea whose title is already on the
+trip is dropped from the proposal, both when you post it and again when Evan
+confirms it. Anything skipped comes back in the response's `skipped` list.
+
 Also read proposals that came back `rejected` with `feedback` since your last
 run. Feedback also arrives as a new `ask_ai` note on that trip. Treat it as a
 request to rework the idea.
@@ -130,7 +145,8 @@ estimate, say so. Don't repeat a find that's already in `proposals`.
       "url": "https://example.com"
     }
   ],
-  "handledNoteIds": ["<id of a note you answered>"]
+  "handledNoteIds": ["<id of a note you answered>"],
+  "withdrawProposalIds": ["<id of your own pending proposal this replaces>"]
 }
 ```
 
@@ -140,6 +156,12 @@ estimate, say so. Don't repeat a find that's already in `proposals`.
 - `proposals`: max 40 per request. `kind` is one of `plan_change`, `idea`,
   `event`, `deal`, `price_drop`, `bonus`, `info`. `changes` is optional; a
   proposal without changes is a heads-up Evan can acknowledge.
+- `withdrawProposalIds`: max 40. Deletes proposals that an assistant wrote
+  and Evan hasn't decided yet. Accepted or rejected ones, and anything Evan
+  wrote, are left alone. Use it when a new proposal replaces an old one, or
+  when Evan asks you to remove one.
+- The response lists `withdrawnProposalIds` and `skipped` (duplicates that
+  weren't saved, with the reason).
 - The request is checked as a whole: if anything is invalid, nothing is saved
   and the error says which item failed.
 
