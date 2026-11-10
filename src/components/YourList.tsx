@@ -42,7 +42,9 @@ export default function YourList() {
               ? "Overdue"
               : daysUntil(t.dueDate) === 0
                 ? "Due today"
-                : `In ${daysUntil(t.dueDate)} days`}
+                : daysUntil(t.dueDate) === 1
+                  ? "Tomorrow"
+                  : `In ${daysUntil(t.dueDate)} days`}
           </p>
         )}
       </div>

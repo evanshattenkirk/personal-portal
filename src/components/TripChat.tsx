@@ -94,7 +94,8 @@ export default function TripChat({
     [fileError, setFileError] = useState(""),
     [thinking, setThinking] = useState<"" | "chat" | "research">(""),
     [askError, setAskError] = useState(""),
-    [askInfo, setAskInfo] = useState("");
+    [askInfo, setAskInfo] = useState(""),
+    [sendError, setSendError] = useState("");
   const instant = Boolean(p.instantReplies) && !p.demo;
   const input = useRef<HTMLInputElement>(null);
   const shown = showAll ? thread : thread.slice(-12);
@@ -325,7 +326,13 @@ export default function TripChat({
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
-                send().catch(() => undefined);
+                // The Send button shows its own errors; the shortcut needs to too.
+                setSendError("");
+                send().catch((err) =>
+                  setSendError(
+                    err instanceof Error ? err.message : "Could not send.",
+                  ),
+                );
               }
             }}
           />
@@ -347,6 +354,11 @@ export default function TripChat({
           </div>
         )}
         {fileError && <span className="error-inline">{fileError}</span>}
+        {sendError && (
+          <span className="error-inline" role="alert">
+            {sendError}
+          </span>
+        )}
         <div className="card-actions" style={{ marginTop: 10 }}>
           <Action className="button" onClick={send}>
             Send

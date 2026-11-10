@@ -1,8 +1,11 @@
+import { connection } from "next/server";
 import { AgentError, agentPost, checkAgentToken } from "@/lib/agent";
 
 // POST /api/agent/post: an assistant's chat replies and proposals.
 // Requires `Authorization: Bearer $PORTAL_AGENT_TOKEN`. See docs/trip-assistant.md.
 export async function POST(request: Request) {
+  // Always answered per request, never prerendered at build time.
+  await connection();
   try {
     checkAgentToken(request);
     const text = await request.text();

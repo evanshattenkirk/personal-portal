@@ -50,6 +50,8 @@ export default function PortalProvider({
             // Older demo saves predate notes and briefs; fill gaps from the fixtures.
             const merged = { ...initialData, ...saved };
             current.current = merged;
+            // Demo saves live in localStorage, which only exists after hydration.
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setData(merged);
           }
         }

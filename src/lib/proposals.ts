@@ -216,5 +216,14 @@ export function describeChange(c: ProposalChange) {
     const when = r.date ?? r.dueDate ?? "";
     return `Add ${noun[c.entity]}${name ? `: ${name}` : ""}${when ? ` (${when})` : ""}`;
   }
-  return `Update ${noun[c.entity]}: ${Object.keys(c.patch).join(", ")}`;
+  // Show the new values, not just field names, so Evan sees what he confirms.
+  const label = (f: string) => f.replace(/[A-Z]/g, (m) => " " + m.toLowerCase());
+  const short = (v: unknown) => {
+    const s = v == null || v === "" ? "(cleared)" : String(v);
+    return s.length > 80 ? s.slice(0, 77) + "…" : s;
+  };
+  return `Update ${noun[c.entity]}: ${Object.entries(c.patch)
+    .filter(([f]) => f !== "id")
+    .map(([f, v]) => `${label(f)} → ${short(v)}`)
+    .join("; ")}`;
 }

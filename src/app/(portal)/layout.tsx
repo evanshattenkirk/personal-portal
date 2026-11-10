@@ -2,12 +2,18 @@ import PortalProvider from "@/components/PortalProvider";
 import { getPortalData } from "@/lib/data";
 import { Suspense } from "react";
 import { connection } from "next/server";
+import type { PortalData } from "@/lib/types";
 async function DataPortal({ children }: { children: React.ReactNode }) {
   await connection();
+  // Only the data load is guarded; the JSX is built outside the try so a
+  // rendering error isn't mistaken for a connection problem.
+  let data: PortalData | null = null;
   try {
-    const data = await getPortalData();
-    return <PortalProvider initialData={data}>{children}</PortalProvider>;
+    data = await getPortalData();
   } catch {
+    data = null;
+  }
+  if (!data)
     return (
       <section className="empty-state card">
         <span className="eyebrow">Connection needs attention</span>
@@ -18,6 +24,8 @@ async function DataPortal({ children }: { children: React.ReactNode }) {
           finish.
         </p>
         <p>No demo data is being shown in place of your records.</p>
+        {/* A full page load on purpose: it re-runs the data load. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a className="button" href="/">
           Try again
         </a>
@@ -26,7 +34,7 @@ async function DataPortal({ children }: { children: React.ReactNode }) {
         </a>
       </section>
     );
-  }
+  return <PortalProvider initialData={data}>{children}</PortalProvider>;
 }
 
 export default function PortalLayout({
