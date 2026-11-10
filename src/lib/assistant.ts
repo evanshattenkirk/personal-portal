@@ -174,6 +174,10 @@ export async function replyInPortal(
       try {
         const blob = await agentScreenshot(shot.path);
         if (blob.size > 4_500_000) continue;
+        // HEIC/HEIF uploads are allowed in storage but the API can't read
+        // them; sending one mislabeled would fail the whole reply.
+        if (/image\/hei[cf]/i.test(blob.type) || /\.hei[cf]$/i.test(shot.path))
+          continue;
         content.push({
           type: "image",
           source: {

@@ -185,7 +185,9 @@ export default function Tasks({
                       ? "Overdue"
                       : daysUntil(row.dueDate) === 0
                         ? "Today"
-                        : `In ${daysUntil(row.dueDate)} days`}
+                        : daysUntil(row.dueDate) === 1
+                          ? "Tomorrow"
+                          : `In ${daysUntil(row.dueDate)} days`}
                   </span>
                 )}
                 <button

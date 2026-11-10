@@ -16,7 +16,7 @@ test("proposal changes accept allowed creates and updates", () => {
   );
   assert.equal(changes.length, 2);
   assert.equal(describeChange(changes[0]), "Add idea: Carnival Bahamas");
-  assert.equal(describeChange(changes[1]), "Update trip details: startDate");
+  assert.equal(describeChange(changes[1]), "Update trip details: start date → 2027-04-15");
 });
 
 test("proposal changes refuse bookings, unknown fields, new trips, and slug changes", () => {

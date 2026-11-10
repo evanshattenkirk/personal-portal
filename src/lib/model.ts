@@ -77,7 +77,7 @@ export function tripWhen(trip: Trip) {
     return trip.endDate && daysUntil(trip.endDate) >= 0
       ? "On your trip"
       : "Past adventure";
-  return `${days} days to go`;
+  return days === 1 ? "1 day to go" : `${days} days to go`;
 }
 export function creditTotals(b: Booking[]) {
   const active = b.filter((x) => bookingStatus(x) !== "cancelled");
