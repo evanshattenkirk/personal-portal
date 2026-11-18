@@ -3,6 +3,7 @@ import { isDemoMode, isPortalOwner, isSupabaseConfigured } from "./data";
 import { clipFarmDemo } from "./clipfarm-demo";
 import { emptyClipFarm, type ClipFarmData } from "./clipfarm";
 import { clipTables, fromClipRow, type ClipEntity } from "./clipfarm-records";
+import { readHistory } from "./clipfarm-history";
 
 const keys: ClipEntity[] = ["campaigns", "accounts", "clips", "payouts"];
 
@@ -18,9 +19,14 @@ export async function getClipFarmData(): Promise<ClipFarmData> {
   if (!user || !isPortalOwner(user.email))
     throw new Error("Sign in with the owner account to load the Clip Farm.");
   const result = emptyClipFarm();
-  const reads = await Promise.all(
-    keys.map((k) => db.from(clipTables[k]).select("*").eq("user_id", user.id)),
-  );
+  const [reads, history] = await Promise.all([
+    Promise.all(
+      keys.map((k) => db.from(clipTables[k]).select("*").eq("user_id", user.id)),
+    ),
+    // Before migration 0012 this is empty and historyReady is false.
+    readHistory(db, user.id),
+  ]);
+  Object.assign(result, history);
   for (const [i, { data, error }] of reads.entries()) {
     if (error) {
       // 42P01 = table missing: the migration hasn't run yet.

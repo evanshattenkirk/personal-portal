@@ -46,6 +46,30 @@ export function checkAgentToken(request: Request) {
     throw new AgentError("Unauthorized.", 401);
 }
 
+const sameToken = (given: string, expected: string) => {
+  const a = Buffer.from(given),
+    b = Buffer.from(expected);
+  return expected.length >= 32 && a.length === b.length && timingSafeEqual(a, b);
+};
+
+/**
+ * The Clip Farm routes accept PORTAL_AGENT_TOKEN or their own
+ * CLIPFARM_AGENT_TOKEN, so the clipping pipeline can be revoked on its own
+ * without breaking the trip assistant.
+ */
+export function checkClipAgentToken(request: Request) {
+  const tokens = [process.env.CLIPFARM_AGENT_TOKEN, process.env.PORTAL_AGENT_TOKEN]
+    .map((t) => t?.trim() ?? "")
+    .filter((t) => t.length >= 32);
+  if (!tokens.length) throw new AgentError("The assistant API is not configured.", 503);
+  const given = (request.headers.get("authorization") ?? "")
+    .replace(/^Bearer\s+/i, "")
+    .trim();
+  // Compare against every token so timing doesn't reveal which one matched.
+  const ok = tokens.map((t) => sameToken(given, t)).some(Boolean);
+  if (!ok) throw new AgentError("Unauthorized.", 401);
+}
+
 export function serviceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.SUPABASE_SERVICE_ROLE_KEY;

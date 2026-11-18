@@ -15,6 +15,12 @@ import {
   type ClipEntity,
   type ClipEntityMap,
 } from "@/lib/clipfarm-records";
+import {
+  campaignSnapshotRow,
+  clipSnapshotRow,
+  insertSnapshots,
+  writeWithFallback,
+} from "@/lib/clipfarm-history";
 
 type Result<T> = { record: T | null; error: string | null };
 
@@ -46,17 +52,28 @@ export async function saveClipRecord<K extends ClipEntity>(
       unknown
     >;
     const { db, user } = await ownerSession();
+    let before: Record<string, unknown> | null = null;
+    if (entity === "campaigns") {
+      const { data } = await db
+        .from("clip_campaigns")
+        .select("budget_used, active_clippers, budget_checked_at")
+        .eq("id", record.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      before = data;
+    }
     if (entity === "clips") {
       // Approval only happens through reviewClip, which re-checks the guards.
       const { data: existing } = await db
         .from("clips")
-        .select("status")
+        .select("status, views, stats_as_of")
         .eq("id", record.id)
         .eq("user_id", user.id)
         .maybeSingle();
-      const before = (existing?.status as string | undefined) ?? "review";
+      before = existing;
+      const was = (existing?.status as string | undefined) ?? "review";
       const goingLive = ["approved", "posted", "submitted"];
-      if (!goingLive.includes(before) && goingLive.includes(String(record.status)))
+      if (!goingLive.includes(was) && goingLive.includes(String(record.status)))
         throw new Error("Approve a clip from the review queue.");
     }
     for (const [field, table] of [
@@ -72,16 +89,17 @@ export async function saveClipRecord<K extends ClipEntity>(
         .maybeSingle();
       if (!data) throw new Error(`That ${field.replace("Id", "")} wasn't found.`);
     }
-    const { data, error } = await db
-      .from(clipTables[entity])
-      .upsert({ ...toClipRow(entity, record), user_id: user.id })
-      .select("*")
-      .single();
+    const { data, error } = await writeWithFallback(
+      [{ ...toClipRow(entity, record), user_id: user.id }],
+      (rows) => db.from(clipTables[entity]).upsert(rows[0]).select("*").single(),
+    );
     if (error || !data) {
       console.error("Clip Farm save failed", clipTables[entity], error?.code);
       throw new Error("Could not save. Check that migration 0011 has run.");
     }
-    return { record: fromClipRow(entity, data), error: null };
+    const saved = fromClipRow(entity, data);
+    await recordHistory(db, user.id, entity, before, saved);
+    return { record: saved, error: null };
   } catch (error) {
     return fail(error);
   }
@@ -102,7 +120,7 @@ export async function updateClip(
     const { db, user } = await ownerSession();
     const { data: existing, error: readError } = await db
       .from("clips")
-      .select("status, account_id, campaign_id")
+      .select("status, account_id, campaign_id, views, stats_as_of")
       .eq("id", id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -133,17 +151,48 @@ export async function updateClip(
         .maybeSingle();
       if (!data) throw new Error(`That ${field.replace("Id", "")} wasn't found.`);
     }
-    const { data, error } = await db
-      .from("clips")
-      .update(toClipRow("clips", fields))
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .select("*")
-      .single();
+    const { data, error } = await writeWithFallback([toClipRow("clips", fields)], (rows) =>
+      db
+        .from("clips")
+        .update(rows[0])
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .select("*")
+        .single(),
+    );
     if (error || !data) throw new Error("Could not save the clip.");
-    return { record: fromClipRow("clips", data), error: null };
+    const saved = fromClipRow("clips", data);
+    if ("views" in fields) await recordHistory(db, user.id, "clips", existing, saved);
+    return { record: saved, error: null };
   } catch (error) {
     return fail(error);
+  }
+}
+
+/** Best-effort history rows for runway, pace and the day-7 refit. */
+async function recordHistory(
+  db: Awaited<ReturnType<typeof createClient>>,
+  uid: string,
+  entity: ClipEntity,
+  before: Record<string, unknown> | null,
+  saved: unknown,
+) {
+  if (entity === "clips") {
+    const clip = saved as Clip;
+    const prev = before
+      ? { views: Number(before.views ?? 0), statsAsOf: (before.stats_as_of as string | null) ?? null }
+      : null;
+    await insertSnapshots(db, "clip_snapshots", [clipSnapshotRow(prev, clip, uid)]);
+  } else if (entity === "campaigns") {
+    const c = saved as ClipEntityMap["campaigns"];
+    const prev = before
+      ? {
+          budgetUsed: before.budget_used == null ? null : Number(before.budget_used),
+          activeClippers: before.active_clippers == null ? null : Number(before.active_clippers),
+          budgetCheckedAt: (before.budget_checked_at as string | null) ?? null,
+        }
+      : null;
+    await insertSnapshots(db, "campaign_snapshots", [campaignSnapshotRow(prev, c, uid)]);
   }
 }
 

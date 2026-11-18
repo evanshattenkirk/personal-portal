@@ -29,7 +29,7 @@ Apply migrations in order. For an existing v1 portal, apply `0004_ledgers_tasks.
 - Wallet balances stay separate by program/owner, with freshness and trip allocation. Credits track each period’s allowance, submitted usage, pending amount, and posted credit.
 - Library supports search, categories, pins, private web destinations, and local access instructions. Local paths are copyable references, not browser-accessible file links.
 
-- Clip Farm (`/clips`) runs the clipping business: a keyboard review queue where nothing posts until approved, campaigns ranked by budget left per clipper, per-account kill/scale signals, payout eligibility, and an earn → hold → withdrawable money timeline. The clipping pipeline feeds it through `/api/agent/clips`. Needs migration `0011_clip_farm.sql`; see `docs/clip-farm.md`.
+- Clip Farm (`/clips`) runs the clipping business: a keyboard review queue where nothing posts until approved, campaigns ranked by budget left per clipper, per-account kill/scale signals, payout eligibility, and an earn → hold → withdrawable money timeline. The clipping pipeline feeds it through `/api/agent/clips`. v1.1 adds stats history (budget runway, pool pace, day-7 refit), launch speed and late-submission tracking, per-account posting caps, format experiments and phone-playable previews. Needs migrations `0011_clip_farm.sql` and `0012_clip_farm_history.sql`; see `docs/clip-farm.md`.
 
 ## Architecture
 
