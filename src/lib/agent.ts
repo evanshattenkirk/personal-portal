@@ -46,7 +46,7 @@ export function checkAgentToken(request: Request) {
     throw new AgentError("Unauthorized.", 401);
 }
 
-function serviceClient() {
+export function serviceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL,
     key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key)
@@ -56,7 +56,7 @@ function serviceClient() {
   });
 }
 
-async function ownerId(db: SupabaseClient) {
+export async function ownerId(db: SupabaseClient) {
   const fixed = process.env.PORTAL_OWNER_USER_ID?.trim();
   if (fixed) return fixed;
   const owners = ownerEmails();

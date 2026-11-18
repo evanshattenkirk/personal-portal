@@ -29,6 +29,8 @@ Apply migrations in order. For an existing v1 portal, apply `0004_ledgers_tasks.
 - Wallet balances stay separate by program/owner, with freshness and trip allocation. Credits track each period’s allowance, submitted usage, pending amount, and posted credit.
 - Library supports search, categories, pins, private web destinations, and local access instructions. Local paths are copyable references, not browser-accessible file links.
 
+- Clip Farm (`/clips`) runs the clipping business: a keyboard review queue where nothing posts until approved, campaigns ranked by budget left per clipper, per-account kill/scale signals, payout eligibility, and an earn → hold → withdrawable money timeline. The clipping pipeline feeds it through `/api/agent/clips`. Needs migration `0011_clip_farm.sql`; see `docs/clip-farm.md`.
+
 ## Architecture
 
 `src/lib/types.ts` defines records; `records.ts` validates and maps explicit allowed fields; `model.ts` contains pure date/status/money logic. `data.ts` reads authenticated Supabase data and surfaces errors. Server actions independently authenticate, check related record ownership, and persist with RLS. `PortalProvider` keeps all views consistent after successful writes, while demo mode writes only to namespaced local storage. Existing content remains in its original database tables. No email, travel provider, or credit account integrations are fabricated.
