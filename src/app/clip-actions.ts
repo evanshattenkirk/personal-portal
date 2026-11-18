@@ -87,6 +87,66 @@ export async function saveClipRecord<K extends ClipEntity>(
   }
 }
 
+/**
+ * Changes only the given fields of one clip, so stats the pipeline wrote
+ * after the page loaded are never overwritten by a stale copy.
+ */
+export async function updateClip(
+  id: string,
+  patch: Record<string, unknown>,
+): Promise<Result<Clip>> {
+  try {
+    const fields = validateClipRecord("clips", { ...patch, id }, { partial: true }) as unknown as Record<string, unknown>;
+    delete fields.id;
+    if (!Object.keys(fields).length) throw new Error("Nothing to change.");
+    const { db, user } = await ownerSession();
+    const { data: existing, error: readError } = await db
+      .from("clips")
+      .select("status, account_id, campaign_id")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (readError || !existing) throw new Error("That clip wasn't found.");
+    const goingLive = ["approved", "posted", "submitted"];
+    if (
+      "status" in fields &&
+      !goingLive.includes(existing.status as string) &&
+      goingLive.includes(String(fields.status))
+    )
+      throw new Error("Approve a clip from the review queue.");
+    if (
+      "accountId" in fields &&
+      fields.accountId !== existing.account_id &&
+      existing.status !== "review"
+    )
+      throw new Error("Change the account only while the clip is in review.");
+    for (const [field, table] of [
+      ["campaignId", "clip_campaigns"],
+      ["accountId", "clip_accounts"],
+    ] as const) {
+      if (!fields[field]) continue;
+      const { data } = await db
+        .from(table)
+        .select("id")
+        .eq("id", fields[field])
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (!data) throw new Error(`That ${field.replace("Id", "")} wasn't found.`);
+    }
+    const { data, error } = await db
+      .from("clips")
+      .update(toClipRow("clips", fields))
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .select("*")
+      .single();
+    if (error || !data) throw new Error("Could not save the clip.");
+    return { record: fromClipRow("clips", data), error: null };
+  } catch (error) {
+    return fail(error);
+  }
+}
+
 export async function deleteClipRecord(entity: ClipEntity, id: string) {
   try {
     const { db, user } = await ownerSession();

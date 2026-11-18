@@ -1,6 +1,6 @@
 import "server-only";
 import { AgentError, ownerId, serviceClient } from "./agent";
-import { formatLeaderboard, rankCampaigns } from "./clipfarm";
+import { budgetLeft, formatLeaderboard, rankCampaigns } from "./clipfarm";
 import {
   clipTables,
   fromClipRow,
@@ -48,7 +48,11 @@ export async function clipFarmInbox() {
     guide: "docs/clip-farm.md in github.com/evanshattenkirk/personal-portal",
     // Feed these, best first. Never cut for a campaign that's ended or spent.
     campaigns: rankCampaigns(campaigns)
-      .filter((r) => r.campaign.status === "active" || r.campaign.status === "applied")
+      .filter(
+        (r) =>
+          (r.campaign.status === "active" || r.campaign.status === "applied") &&
+          budgetLeft(r.campaign) !== 0,
+      )
       .map((r) => ({ ...r.campaign, score: r.score })),
     accounts: accounts.filter((x) => x.status !== "killed"),
     // Evan said yes: post these, then mark each posted with its URL.

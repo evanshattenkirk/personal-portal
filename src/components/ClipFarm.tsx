@@ -41,6 +41,7 @@ import {
   deleteClipRecord,
   reviewClip,
   saveClipRecord,
+  updateClip,
 } from "@/app/clip-actions";
 import { Empty, RecordForm, SectionTitle, opts, type Field } from "./Kit";
 
@@ -117,6 +118,21 @@ export default function ClipFarm({ initial }: { initial: ClipFarmData }) {
       const res = await saveClipRecord(entity, input);
       if (res.error || !res.record) throw new Error(res.error ?? "Could not save.");
       commit(replace(entity, res.record as ClipEntityMap[K], data));
+    },
+    [data, commit, replace],
+  );
+
+  // Sends only the changed fields, so fresher pipeline stats survive.
+  const patchClip = useCallback(
+    async (clip: Clip, patch: Partial<Clip>) => {
+      if (data.demo) {
+        const record = validateClipRecord("clips", { ...clip, ...patch });
+        commit(replace("clips", record, data));
+        return;
+      }
+      const res = await updateClip(clip.id, patch as Record<string, unknown>);
+      if (res.error || !res.record) throw new Error(res.error ?? "Could not save.");
+      commit(replace("clips", res.record, data));
     },
     [data, commit, replace],
   );
@@ -224,9 +240,9 @@ export default function ClipFarm({ initial }: { initial: ClipFarmData }) {
         <Today data={data} alerts={alerts} now={now} go={setTab} counts={counts} />
       )}
       {tab === "review" && (
-        <Review data={data} launch={launch} now={now} decide={decide} save={save} />
+        <Review data={data} launch={launch} now={now} decide={decide} patch={patchClip} />
       )}
-      {tab === "pipeline" && <Pipeline data={data} now={now} save={save} />}
+      {tab === "pipeline" && <Pipeline data={data} now={now} patch={patchClip} />}
       {tab === "campaigns" && (
         <Campaigns
           data={data}
@@ -427,13 +443,13 @@ function Review({
   launch,
   now,
   decide,
-  save,
+  patch,
 }: {
   data: ClipFarmData;
   launch: boolean;
   now: Date;
   decide: (clip: Clip, d: "approve" | "reject", reason?: string) => Promise<void>;
-  save: (e: "clips", r: Record<string, unknown>) => Promise<void>;
+  patch: (clip: Clip, p: Partial<Clip>) => Promise<void>;
 }) {
   const queue = useMemo(() => {
     const list = data.clips.filter((c) => c.status === "review");
@@ -565,7 +581,7 @@ function Review({
                 value={clip.accountId ?? ""}
                 disabled={busy}
                 onChange={(e) =>
-                  run(() => save("clips", { ...clip, accountId: e.target.value || null }))
+                  run(() => patch(clip, { accountId: e.target.value || null }))
                 }
               >
                 <option value="">Pick an account</option>
@@ -660,11 +676,11 @@ function Review({
 function Pipeline({
   data,
   now,
-  save,
+  patch,
 }: {
   data: ClipFarmData;
   now: Date;
-  save: (e: "clips", r: Record<string, unknown>) => Promise<void>;
+  patch: (clip: Clip, p: Partial<Clip>) => Promise<void>;
 }) {
   const [filter, setFilter] = useState<"live" | "approved" | "rejected">("live");
   const rows = data.clips.filter((c) =>
@@ -696,7 +712,7 @@ function Pipeline({
       )}
       <div className="cf-list">
         {rows.map((clip) => (
-          <PipelineRow key={clip.id} clip={clip} data={data} now={now} save={save} />
+          <PipelineRow key={clip.id} clip={clip} data={data} now={now} patch={patch} />
         ))}
       </div>
       {!rows.length && <Empty title="Nothing here yet" />}
@@ -708,12 +724,12 @@ function PipelineRow({
   clip,
   data,
   now,
-  save,
+  patch,
 }: {
   clip: Clip;
   data: ClipFarmData;
   now: Date;
-  save: (e: "clips", r: Record<string, unknown>) => Promise<void>;
+  patch: (clip: Clip, p: Partial<Clip>) => Promise<void>;
 }) {
   const c = campaignFor(clip, data.campaigns);
   const account = data.accounts.find((a) => a.id === clip.accountId);
@@ -726,11 +742,11 @@ function PipelineRow({
   const mins = clip.postedAt ? (now.getTime() - Date.parse(clip.postedAt)) / 60000 : null;
   const est = estimatedEarnings(clip, data.campaigns);
   const need = c?.kind === "cpm" ? viewsToMinimum(c) : 0;
-  const act = async (patch: Partial<Clip>) => {
+  const act = async (changes: Partial<Clip>) => {
     setBusy(true);
     setError("");
     try {
-      await save("clips", { ...clip, ...patch });
+      await patch(clip, changes);
       setForm(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save.");
