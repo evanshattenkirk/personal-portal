@@ -89,12 +89,14 @@ export function RecordForm({
   initial,
   onSave,
   onClose,
+  onDelete,
 }: {
   title: string;
   fields: Field[];
   initial: Record<string, unknown>;
   onSave: (r: Record<string, unknown>) => Promise<void>;
   onClose: () => void;
+  onDelete?: () => Promise<void>;
 }) {
   const [record, setRecord] = useState(initial),
     [busy, setBusy] = useState(false),
@@ -217,6 +219,29 @@ export function RecordForm({
           </p>
         )}
         <div className="modal-footer">
+          {onDelete && (
+            <button
+              className="button ghost"
+              type="button"
+              disabled={busy}
+              style={{ marginRight: "auto" }}
+              onClick={async () => {
+                if (!window.confirm("Delete this for good?")) return;
+                setBusy(true);
+                setError("");
+                try {
+                  await onDelete();
+                  onClose();
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Could not delete.");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Delete
+            </button>
+          )}
           <button
             className="button secondary"
             type="button"

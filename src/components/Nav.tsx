@@ -9,6 +9,7 @@ const items = [
   ["/points", "Wallet", "wallet"],
   ["/ledgers", "Ledgers", "wallet"],
   ["/todo", "Your list", "clock"],
+  ["/clips", "Clips", "star"],
   ["/deadlines", "Actions", "check"],
   ["/links", "Library", "link"],
 ];
