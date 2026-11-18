@@ -572,7 +572,7 @@ export function clipAlerts(data: ClipFarmData, now = new Date()): ClipAlert[] {
         campaignId: c.id,
       });
   for (const a of data.accounts) {
-    const h = accountHealth(a, data.clips, data.campaigns);
+    const h = accountHealth(a, data.clips, data.campaigns, projectionK(data, now));
     if (h.killCandidate)
       out.push({
         level: "info",
@@ -614,7 +614,7 @@ export function clipAlerts(data: ClipFarmData, now = new Date()): ClipAlert[] {
 
 /** Money picture: estimated, in hold, withdrawable, paid. */
 export function moneySummary(data: ClipFarmData, now = new Date()) {
-  const k = fitProjectionK(data, now).k;
+  const k = projectionK(data, now);
   let earning = 0,
     hold = 0,
     estimated = 0;
@@ -714,6 +714,21 @@ export function fitProjectionK(
   return { k: round2(medianOf(ratios)), n: ratios.length, fitted: true };
 }
 
+const kCache = new WeakMap<Clip[], { snaps: ClipSnapshot[]; day: string; k: number }>();
+
+/** The fitted day-7 multiplier for this data, cached so every view uses the same one cheaply. */
+export function projectionK(
+  data: Pick<ClipFarmData, "clips" | "clipSnapshots">,
+  now = new Date(),
+) {
+  const day = now.toISOString().slice(0, 13);
+  const hit = kCache.get(data.clips);
+  if (hit && hit.snaps === data.clipSnapshots && hit.day === day) return hit.k;
+  const k: number = fitProjectionK(data, now).k;
+  kCache.set(data.clips, { snaps: data.clipSnapshots, day, k });
+  return k;
+}
+
 /** Budget burn per day from the last ~24–48 h of budget checks, and days left. */
 export function campaignRunway(
   c: ClipCampaign,
@@ -767,7 +782,7 @@ export function poolPace(
 /** Projected payouts of clips still inside a campaign's earn window. */
 export function queuedPayouts(c: ClipCampaign, data: ClipFarmData, now = new Date()) {
   if (c.kind !== "cpm") return 0;
-  const k = fitProjectionK(data, now).k;
+  const k = projectionK(data, now);
   let total = 0;
   for (const clip of data.clips) {
     if (clip.campaignId !== c.id) continue;
@@ -777,28 +792,39 @@ export function queuedPayouts(c: ClipCampaign, data: ClipFarmData, now = new Dat
   return round2(total);
 }
 
-/** Money expected to become withdrawable in the next 7 days, plus what already is. */
+/**
+ * Money expected to become withdrawable in the next 7 days, plus what already
+ * is. Where Evan has recorded a pending or held payout for a campaign, that
+ * recorded amount stands in for the clip estimates it covers (the larger of
+ * the two counts), so nothing is counted twice.
+ */
 export function cashNext7(data: ClipFarmData, now = new Date()) {
-  const k = fitProjectionK(data, now).k;
+  const k = projectionK(data, now);
   const horizon = addDaysISO(todayISO(now), 7);
-  let fromClips = 0;
+  const estimated = new Map<string, number>();
   for (const clip of data.clips) {
     const c = campaignFor(clip, data.campaigns);
     if (!c || c.kind !== "cpm") continue;
     const w = earnWindow(clip, c, now);
     if (w && w.phase !== "done" && w.withdrawableOn <= horizon)
-      fromClips += estimatedEarnings(clip, data.campaigns, k);
+      estimated.set(c.id, (estimated.get(c.id) ?? 0) + estimatedEarnings(clip, data.campaigns, k));
   }
-  const fromPayouts = data.payouts
-    .filter(
-      (p) =>
-        p.status === "withdrawable" ||
-        ((p.status === "pending" || p.status === "hold") &&
-          p.availableOn != null &&
-          p.availableOn <= horizon),
-    )
-    .reduce((t, p) => t + p.amount, 0);
-  return round2(fromClips + fromPayouts);
+  const recorded = new Map<string, number>();
+  let total = 0;
+  for (const p of data.payouts) {
+    if (p.status === "withdrawable") total += p.amount;
+    else if (
+      (p.status === "pending" || p.status === "hold") &&
+      p.availableOn != null &&
+      p.availableOn <= horizon
+    ) {
+      if (p.campaignId) recorded.set(p.campaignId, (recorded.get(p.campaignId) ?? 0) + p.amount);
+      else total += p.amount;
+    }
+  }
+  for (const id of new Set([...estimated.keys(), ...recorded.keys()]))
+    total += Math.max(estimated.get(id) ?? 0, recorded.get(id) ?? 0);
+  return round2(total);
 }
 
 // ---------- Speed ----------
@@ -886,12 +912,14 @@ export function experimentResults(
     byExp.set(key, [...(byExp.get(key) ?? []), c]);
   }
   return [...byExp.entries()].map(([experiment, clips]) => {
+    // Every variant that has a live clip counts as an arm, measured or not,
+    // so an arm still short of data can't be skipped when calling a winner.
     const arms = new Map<string, number[]>();
     for (const c of clips) {
-      const lift = clipLift(c, data);
-      if (lift == null) continue;
       const v = c.variant!.trim();
-      arms.set(v, [...(arms.get(v) ?? []), lift]);
+      if (!arms.has(v)) arms.set(v, []);
+      const lift = clipLift(c, data);
+      if (lift != null) arms.get(v)!.push(lift);
     }
     const rows = [...arms.entries()]
       .map(([variant, lifts]) => ({ variant, clips: lifts.length, medianLift: round2(medianOf(lifts)) }))

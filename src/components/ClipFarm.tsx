@@ -14,6 +14,7 @@ import {
   fitProjectionK,
   postsToday,
   poolPace,
+  projectionK,
   REFIT_MIN_CLIPS,
   speedStats,
   SUBMIT_LATE_MIN,
@@ -328,7 +329,7 @@ function Today({
   counts: ReturnType<typeof clipCounts>;
 }) {
   const money = moneySummary(data, now);
-  const rate = minClearRate(data.clips, data.campaigns);
+  const rate = minClearRate(data.clips, data.campaigns, projectionK(data, now));
   const cash7 = cashNext7(data, now);
   const speed = speedStats(data, now);
   const top = rankCampaigns(data.campaigns)
@@ -795,7 +796,8 @@ function PipelineRow({
   const [error, setError] = useState("");
   const w = c ? earnWindow(clip, c, now) : null;
   const mins = clip.postedAt ? (now.getTime() - Date.parse(clip.postedAt)) / 60000 : null;
-  const est = estimatedEarnings(clip, data.campaigns);
+  const k = projectionK(data);
+  const est = estimatedEarnings(clip, data.campaigns, k);
   const need = c?.kind === "cpm" ? viewsToMinimum(c) : 0;
   const act = async (changes: Partial<Clip>) => {
     setBusy(true);
@@ -845,7 +847,7 @@ function PipelineRow({
       <div className="cf-row-nums">
         <span>
           <strong>{fmtNum(clip.views)}</strong>
-          <small>views{clip.views24h ? ` · day 7 ≈ ${fmtNum(projected7d(clip))}` : ""}</small>
+          <small>views{clip.views24h ? ` · day 7 ≈ ${fmtNum(projected7d(clip, k))}` : ""}</small>
         </span>
         <span>
           <strong>{fmtUSD(est)}</strong>
@@ -1042,7 +1044,7 @@ function AccountCard({
   data: ClipFarmData;
   edit: (r: Record<string, unknown>) => void;
 }) {
-  const h = accountHealth(a, data.clips, data.campaigns);
+  const h = accountHealth(a, data.clips, data.campaigns, projectionK(data));
   const e = payoutEligibility(a);
   const used = postsToday(a, data.clips),
     cap = dailyCap(a);
@@ -1107,7 +1109,7 @@ function Money({
     .filter((c) => c.kind === "cpm")
     .map((c) => {
       const clips = data.clips.filter((x) => x.campaignId === c.id);
-      const est = clips.reduce((s, x) => s + estimatedEarnings(x, data.campaigns), 0);
+      const est = clips.reduce((s, x) => s + estimatedEarnings(x, data.campaigns, projectionK(data)), 0);
       const actual = data.payouts
         .filter((p) => p.campaignId === c.id)
         .reduce((s, p) => s + p.amount, 0);

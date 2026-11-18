@@ -468,3 +468,23 @@ test("demo history drives runway and an experiment", () => {
   assert.ok(campaignRunway(d.campaigns[0], d.campaignSnapshots, now).burnPerDay! > 0);
   assert.equal(experimentResults(d, now)[0].experiment, "First frame");
 });
+
+test("cash landing counts a recorded payout instead of the clip estimates it covers", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const clips = [clip({ id: "a", status: "submitted", review: "accepted", approvedAt: at(now, -24 * 5), views: 25000 })];
+  const hold = { id: "h", source: "CR", campaignId: "tomo", amount: 45, status: "hold" as const, availableOn: "2026-11-27", paidOn: null, note: null };
+  assert.equal(cashNext7(farm({ clips }), now), 45);
+  assert.equal(cashNext7(farm({ clips, payouts: [hold] }), now), 45);
+  assert.equal(cashNext7(farm({ clips, payouts: [{ ...hold, amount: 60 }] }), now), 60);
+});
+
+test("an experiment arm without measurements still blocks a winner call", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const arm = (variant: string, views: number | null, n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      clip({ id: `${variant}${i}`, status: "submitted", postedAt: at(now, -48), views24h: views, experiment: "Hook", variant }),
+    );
+  const r = experimentResults({ clips: [...arm("A", 1000, 10), ...arm("B", 2000, 10), ...arm("C", null, 1)], clipSnapshots: [] }, now)[0];
+  assert.equal(r.arms.length, 3);
+  assert.equal(r.verdict, "running");
+});
