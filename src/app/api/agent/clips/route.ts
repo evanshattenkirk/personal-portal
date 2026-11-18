@@ -1,12 +1,12 @@
 import { connection } from "next/server";
-import { AgentError, checkAgentToken } from "@/lib/agent";
+import { AgentError, checkClipAgentToken } from "@/lib/agent";
 import { clipFarmInbox, clipFarmPost } from "@/lib/clipfarm-agent";
 
 // /api/agent/clips: the clipping pipeline's door into the Clip Farm.
 // GET  → ranked campaigns, accounts, approved clips to post, clips to track.
 // POST → { clips: [...], accounts: [...] } adds clips to review, marks
 //        approved clips posted, and refreshes stats. It can never approve.
-// Requires `Authorization: Bearer $PORTAL_AGENT_TOKEN`. See docs/clip-farm.md.
+// Requires `Authorization: Bearer $CLIPFARM_AGENT_TOKEN` (or $PORTAL_AGENT_TOKEN). See docs/clip-farm.md.
 function failure(error: unknown, what: string) {
   const status = error instanceof AgentError ? error.status : 500;
   if (status === 500) console.error(`Clip Farm ${what} failed`, error);
@@ -19,7 +19,7 @@ function failure(error: unknown, what: string) {
 export async function GET(request: Request) {
   await connection();
   try {
-    checkAgentToken(request);
+    checkClipAgentToken(request);
     return Response.json(await clipFarmInbox(), {
       headers: { "Cache-Control": "no-store" },
     });
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   await connection();
   try {
-    checkAgentToken(request);
+    checkClipAgentToken(request);
     const text = await request.text();
     if (text.length > 400_000) throw new AgentError("Request is too large.", 413);
     let body: unknown;

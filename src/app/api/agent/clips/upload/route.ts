@@ -1,15 +1,15 @@
 import { connection } from "next/server";
-import { AgentError, checkAgentToken } from "@/lib/agent";
+import { AgentError, checkClipAgentToken } from "@/lib/agent";
 import { clipFarmUpload, portalOrigin } from "@/lib/clipfarm-agent";
 
 // POST /api/agent/clips/upload { clipId, contentType: "video/mp4", bytes }
 // → { uploadUrl, uploadMethod, uploadHeaders, previewUrl }. The pipeline PUTs
 // the MP4 to uploadUrl (private bucket), then sets previewUrl on the clip so
-// the review card plays it on Evan's phone. Requires PORTAL_AGENT_TOKEN.
+// the review card plays it on Evan's phone. Requires CLIPFARM_AGENT_TOKEN (or PORTAL_AGENT_TOKEN).
 export async function POST(request: Request) {
   await connection();
   try {
-    checkAgentToken(request);
+    checkClipAgentToken(request);
     const text = await request.text();
     if (text.length > 10_000) throw new AgentError("Request is too large.", 413);
     let body: unknown;

@@ -12,8 +12,10 @@ account health and payout timeline. The full spec lives in Evan's Claude Doc
    history, experiments, posting caps and the private `clip-previews` bucket.
    Before it runs, `/clips` still works and simply shows no runway, pace or
    refit numbers, and saves skip the new fields.
-3. The pipeline API reuses `PORTAL_AGENT_TOKEN` and `SUPABASE_SERVICE_ROLE_KEY`
-   (already set if the trip assistant works).
+3. Add `CLIPFARM_AGENT_TOKEN` (32+ characters) in Vercel for the clipping
+   pipeline. The clip routes also accept `PORTAL_AGENT_TOKEN`, but a separate
+   token lets you revoke the pipeline without breaking the trip assistant.
+   `SUPABASE_SERVICE_ROLE_KEY` must be set (it already is if the trip assistant works).
 
 ## Code map
 
@@ -35,7 +37,7 @@ account health and payout timeline. The full spec lives in Evan's Claude Doc
 
 ## Pipeline API
 
-Every request needs `Authorization: Bearer $PORTAL_AGENT_TOKEN`.
+Every request needs `Authorization: Bearer $CLIPFARM_AGENT_TOKEN` (or `$PORTAL_AGENT_TOKEN`).
 
 ### GET /api/agent/clips
 
