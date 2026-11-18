@@ -15,15 +15,28 @@ import {
   rankCampaigns,
   viewsToCap,
   viewsToMinimum,
+  campaignRunway,
+  cashNext7,
+  emptyClipFarm,
+  experimentResults,
+  fitProjectionK,
+  isLate,
+  poolPace,
+  postsToday,
+  queuedPayouts,
+  speedStats,
   type Clip,
   type ClipAccount,
   type ClipCampaign,
 } from "../src/lib/clipfarm.ts";
 import {
   mergePipelineAccount,
+  mergePipelineCampaign,
   mergePipelineClip,
   validateClipRecord,
+  withoutV11Columns,
 } from "../src/lib/clipfarm-records.ts";
+import { campaignSnapshotRow, clipSnapshotRow } from "../src/lib/clipfarm-history.ts";
 import { clipFarmDemo } from "../src/lib/clipfarm-demo.ts";
 
 const tomo = {
@@ -64,6 +77,7 @@ const account = {
   statsAsOf: null,
   url: null,
   notes: null,
+  dailyCap: null,
   sortOrder: 0,
 } as ClipAccount;
 
@@ -96,6 +110,8 @@ const clip = (over: Partial<Clip> = {}): Clip => ({
   statsAsOf: null,
   createdAt: null,
   rejectReason: null,
+  experiment: null,
+  variant: null,
   ...over,
 });
 
@@ -190,6 +206,9 @@ test("alerts flag late submissions, low budgets and opening campaigns", () => {
   const data = {
     demo: false,
     ready: true,
+    historyReady: true,
+    clipSnapshots: [],
+    campaignSnapshots: [],
     accounts: [account],
     payouts: [],
     campaigns: [
@@ -214,7 +233,7 @@ test("money buckets stay separate and min-clear rate uses projections", () => {
     clip({ id: "4", status: "submitted", views: 100 }),
   ];
   const m = moneySummary(
-    { demo: false, ready: true, campaigns: [tomo], accounts: [account], clips, payouts: [
+    { demo: false, ready: true, historyReady: true, clipSnapshots: [], campaignSnapshots: [], campaigns: [tomo], accounts: [account], clips, payouts: [
       { id: "p", source: "CR", campaignId: null, amount: 20, status: "withdrawable", availableOn: null, paidOn: null, note: null },
     ] },
     now,
@@ -265,4 +284,187 @@ test("demo data is internally consistent", () => {
   const blocked = d.clips.filter((c) => c.status === "review" && !canApprove(clipFlags(c, d)));
   assert.deepEqual(blocked.map((c) => c.id), ["demo-clip-2"]);
   assert.ok(clipFlags(d.clips[0], d).some((f) => /approve only one/.test(f.text)));
+});
+
+// ---------- v1.1: history, runway, pace, speed, caps, experiments ----------
+
+const H = 3.6e6;
+const at = (base: Date, hours: number) => new Date(base.getTime() + hours * H).toISOString();
+const farm = (over: Partial<ReturnType<typeof emptyClipFarm>> = {}) => ({
+  ...emptyClipFarm(),
+  campaigns: [tomo],
+  accounts: [account],
+  ...over,
+});
+
+test("the day-7 projection stays at 2.5 until 30 clips have day-7 snapshots, then refits", () => {
+  const now = new Date("2026-12-30T18:00:00Z");
+  const mk = (n: number) => {
+    const clips: Clip[] = [];
+    const clipSnapshots = [];
+    for (let i = 0; i < n; i++) {
+      const posted = new Date(now.getTime() - (10 + i) * 24 * H);
+      clips.push(clip({ id: `k${i}`, status: "submitted", postedAt: posted.toISOString(), views24h: 1000 }));
+      clipSnapshots.push({ id: `s${i}`, clipId: `k${i}`, capturedAt: at(posted, 168), views: 3000 });
+    }
+    return { clips, clipSnapshots };
+  };
+  assert.deepEqual(fitProjectionK(mk(29), now), { k: 2.5, n: 29, fitted: false });
+  assert.deepEqual(fitProjectionK(mk(30), now), { k: 3, n: 30, fitted: true });
+});
+
+test("runway comes from the last two days of budget checks and raises an alert under 1.5 days", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const c = { ...tomo, budgetUsed: 840 };
+  const snaps = [
+    { id: "a", campaignId: "tomo", capturedAt: at(now, -24), budgetUsed: 700, activeClippers: 10 },
+    { id: "b", campaignId: "tomo", capturedAt: at(now, -1), budgetUsed: 840, activeClippers: 12 },
+    { id: "old", campaignId: "tomo", capturedAt: at(now, -100), budgetUsed: 0, activeClippers: 1 },
+  ];
+  const r = campaignRunway(c, snaps, now);
+  assert.equal(r.burnPerDay, 146.09); // $140 over 23 h
+  assert.equal(r.runwayDays, 1.1);
+  const text = clipAlerts(farm({ campaigns: [c], campaignSnapshots: snaps }), now).map((a) => a.text).join("\n");
+  assert.match(text, /Tomo runs dry in about 1.1 days/);
+  assert.deepEqual(campaignRunway(c, snaps.slice(1), now), { burnPerDay: null, runwayDays: null });
+});
+
+test("pool pace compares views needed per day with the last 3 days", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const pool = { ...tomo, id: "pool", kind: "pool" as const, cpm: null, poolViewsRequired: 100000, endsOn: "2026-11-27" };
+  const clips = [
+    clip({ id: "p1", campaignId: "pool", status: "submitted", review: "accepted", postedAt: at(now, -200), views: 20000 }),
+    clip({ id: "p2", campaignId: "pool", status: "submitted", review: "accepted", postedAt: at(now, -10), views: 3000 }),
+  ];
+  const clipSnapshots = [{ id: "s", clipId: "p1", capturedAt: at(now, -80), views: 14000 }];
+  const pace = poolPace(pool, { clips, clipSnapshots }, now)!;
+  assert.equal(pace.daysLeft, 5);
+  assert.equal(pace.needPerDay, 15400); // 77K short over 5 days
+  assert.equal(pace.avgPerDay, 3000); // (6K + 3K) / 3
+  assert.equal(pace.onPace, false);
+  const text = clipAlerts(farm({ campaigns: [pool], clips, clipSnapshots }), now).map((a) => a.text).join("\n");
+  assert.match(text, /off pace/);
+});
+
+test("speed stats and late submissions use the 30-minute window", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const clips = [
+    clip({ id: "f", status: "submitted", createdAt: at(now, -3), postedAt: at(now, -2), submittedAt: at(now, -1.9) }),
+    clip({ id: "l", status: "submitted", createdAt: at(now, -5), postedAt: at(now, -4), submittedAt: at(now, -3) }),
+    clip({ id: "p", status: "posted", createdAt: at(now, -2), postedAt: at(now, -1) }),
+  ];
+  const s = speedStats(farm({ clips }), now);
+  assert.equal(s.cutToPostMin, 60);
+  assert.equal(s.submitLagMin, 33); // median of 6 and 60
+  assert.deepEqual(s.lateIds, ["l", "p"]);
+  assert.equal(isLate(clips[0], [tomo], now), false);
+});
+
+test("posting caps count today's posts plus approved clips and warn in review", () => {
+  const now = new Date();
+  const clips = [
+    clip({ id: "1", status: "posted", postedAt: now.toISOString() }),
+    clip({ id: "2", status: "approved" }),
+    clip({ id: "3", status: "approved" }),
+    clip({ id: "4", status: "submitted", postedAt: now.toISOString() }),
+    clip({ id: "q", status: "review" }),
+  ];
+  const a = { ...account, dailyCap: null };
+  assert.equal(postsToday(a, clips, now), 4);
+  const flags = clipFlags(clips[4], { campaigns: [tomo], accounts: [a], clips });
+  assert.ok(flags.some((f) => f.level === "warn" && /daily cap \(4 of 4\)/.test(f.text)));
+  assert.ok(canApprove(flags)); // a cap only warns
+  assert.ok(!clipFlags(clips[4], { campaigns: [tomo], accounts: [{ ...a, dailyCap: 6 }], clips }).some((f) => /cap/.test(f.text)));
+});
+
+test("experiments call a winner only with 10+ clips per arm and 1.3x lift", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const arm = (variant: string, views: number, n: number) =>
+    Array.from({ length: n }, (_, i) =>
+      clip({ id: `${variant}${i}`, status: "submitted", postedAt: at(now, -48), views24h: views, experiment: "First frame", variant }),
+    );
+  const base = arm("Gameplay", 1000, 10);
+  const running = experimentResults({ clips: [...base, ...arm("Facecam", 2000, 9)], clipSnapshots: [] }, now)[0];
+  assert.equal(running.verdict, "running");
+  const done = experimentResults({ clips: [...base, ...arm("Facecam", 2000, 10)], clipSnapshots: [] }, now)[0];
+  assert.equal(done.verdict, "winner");
+  assert.equal(done.winner, "Facecam");
+  assert.ok(done.arms[0].medianLift > done.arms[1].medianLift * 1.3);
+});
+
+test("queued payouts over budget left raise an alert, and cash landing counts payouts due", () => {
+  const now = new Date("2026-11-22T18:00:00Z");
+  const c = { ...tomo, budgetUsed: 950 }; // $50 left
+  const clips = [
+    clip({ id: "a", status: "submitted", review: "accepted", approvedAt: at(now, -24), views: 25000 }),
+    clip({ id: "b", status: "submitted", review: "accepted", approvedAt: at(now, -24), views: 25000 }),
+  ];
+  assert.equal(queuedPayouts(c, farm({ campaigns: [c], clips }), now), 90);
+  const text = clipAlerts(farm({ campaigns: [c], clips }), now).map((a) => a.text).join("\n");
+  assert.match(text, /more than its \$50.00 left/);
+  const cash = cashNext7(
+    farm({
+      payouts: [
+        { id: "w", source: "CR", campaignId: null, amount: 10, status: "withdrawable", availableOn: null, paidOn: null, note: null },
+        { id: "h", source: "CR", campaignId: null, amount: 5, status: "hold", availableOn: "2026-11-25", paidOn: null, note: null },
+        { id: "late", source: "CR", campaignId: null, amount: 99, status: "hold", availableOn: "2026-12-30", paidOn: null, note: null },
+      ],
+    }),
+    now,
+  );
+  assert.equal(cash, 15);
+});
+
+test("the scout creates campaigns only as watching and changes only budget fields after", () => {
+  const created = mergePipelineCampaign(null, { id: "new", name: "New", status: "active", cpm: 1.5, budgetUsed: 10 });
+  assert.equal(created.status, "watching");
+  assert.ok(created.budgetCheckedAt);
+  const next = mergePipelineCampaign(tomo, {
+    id: "tomo",
+    status: "ended",
+    cpm: 99,
+    name: "Hacked",
+    budgetUsed: 300,
+    activeClippers: 14,
+    rules: "New rule",
+  });
+  assert.equal(next.status, "active");
+  assert.equal(next.cpm, 2);
+  assert.equal(next.name, "Tomo");
+  assert.equal(next.budgetUsed, 300);
+  assert.equal(next.activeClippers, 14);
+  assert.equal(next.rules, "New rule");
+  assert.ok(next.budgetCheckedAt);
+  assert.throws(() => mergePipelineCampaign(null, { id: "x" }), /name is required/);
+});
+
+test("snapshots are written only when the numbers change, and 0012 columns can be dropped", () => {
+  const live = clip({ id: "s", postedAt: "2026-11-20T00:00:00Z", views: 500 });
+  assert.equal(clipSnapshotRow({ views: 500 }, live, "u"), null);
+  assert.equal(clipSnapshotRow({ views: 400 }, live, "u")?.views, 500);
+  assert.equal(clipSnapshotRow(null, { ...live, postedAt: null }, "u"), null);
+  assert.equal(campaignSnapshotRow({ budgetUsed: 200, activeClippers: 10 }, tomo, "u"), null);
+  assert.equal(campaignSnapshotRow({ budgetUsed: 100, activeClippers: 10 }, tomo, "u")?.budget_used, 200);
+  // A stale stamp isn't reused: the snapshot is dated now.
+  const stale = clipSnapshotRow({ views: 400, statsAsOf: "2026-11-20T01:00:00Z" }, { ...live, statsAsOf: "2026-11-20T01:00:00Z" }, "u")!;
+  assert.ok(Date.now() - Date.parse(stale.captured_at) < 60000);
+  const fresh = clipSnapshotRow({ views: 400, statsAsOf: "2026-11-10T01:00:00Z" }, { ...live, statsAsOf: "2026-11-11T01:00:00Z" }, "u")!;
+  assert.equal(fresh.captured_at, "2026-11-11T01:00:00.000Z");
+  const posted = { ...live, status: "posted" as const, statsAsOf: "2026-11-10T01:00:00Z" };
+  assert.ok(Date.parse(mergePipelineClip(posted, { id: "s", views: 900 }).statsAsOf!) > Date.parse("2026-11-11T00:00:00Z"));
+  assert.deepEqual(withoutV11Columns({ id: "x", experiment: "a", variant: "b", daily_cap: 3 }), { id: "x" });
+});
+
+test("pipeline account updates can't change the daily cap", () => {
+  const next = mergePipelineAccount({ ...account, dailyCap: 2 }, { id: "a1", dailyCap: 50, followers: 10 });
+  assert.equal(next.dailyCap, 2);
+  assert.equal(next.followers, 10);
+});
+
+test("demo history drives runway and an experiment", () => {
+  const now = new Date();
+  const d = clipFarmDemo(now);
+  assert.ok(d.historyReady);
+  assert.ok(campaignRunway(d.campaigns[0], d.campaignSnapshots, now).burnPerDay! > 0);
+  assert.equal(experimentResults(d, now)[0].experiment, "First frame");
 });

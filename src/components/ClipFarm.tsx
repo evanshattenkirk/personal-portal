@@ -5,6 +5,18 @@ import {
   budgetLeft,
   budgetLeftPct,
   campaignFor,
+  campaignRunway,
+  cashNext7,
+  clipLift,
+  dailyCap,
+  experimentResults,
+  EXPERIMENT_RULE,
+  fitProjectionK,
+  postsToday,
+  poolPace,
+  REFIT_MIN_CLIPS,
+  speedStats,
+  SUBMIT_LATE_MIN,
   canApprove,
   clipAlerts,
   clipCounts,
@@ -317,6 +329,8 @@ function Today({
 }) {
   const money = moneySummary(data, now);
   const rate = minClearRate(data.clips, data.campaigns);
+  const cash7 = cashNext7(data, now);
+  const speed = speedStats(data, now);
   const top = rankCampaigns(data.campaigns)
     .filter((r) => r.score > 0)
     .slice(0, 3);
@@ -327,11 +341,27 @@ function Today({
         <Metric label="Still earning (7-day window)" value={fmtUSD(money.earning)} />
         <Metric label="In hold" value={fmtUSD(money.hold)} />
         <Metric label="Withdrawable" value={fmtUSD(money.withdrawable)} strong />
+        <Metric label="Cash landing in 7 days" value={fmtUSD(cash7)} />
         <Metric label="Paid out" value={fmtUSD(money.paid)} />
         <Metric
           label="Min-clear rate (target 40%+)"
           value={rate == null ? "—" : `${Math.round(rate * 100)}%`}
           warn={rate != null && rate < 0.4}
+        />
+        <Metric
+          label="Cut → post, median (7 days)"
+          value={speed.cutToPostMin == null ? "—" : fmtMins(speed.cutToPostMin)}
+          warn={speed.cutToPostMin != null && speed.cutToPostMin > 120}
+        />
+        <Metric
+          label={`Post → submit, median (late after ${SUBMIT_LATE_MIN} min)`}
+          value={speed.submitLagMin == null ? "—" : fmtMins(speed.submitLagMin)}
+          warn={speed.submitLagMin != null && speed.submitLagMin > SUBMIT_LATE_MIN}
+        />
+        <Metric
+          label="Late submissions (7 days)"
+          value={String(speed.lateCount)}
+          warn={speed.lateCount > 0}
         />
       </div>
       <div className="grid-two cf-today">
@@ -382,6 +412,8 @@ function Today({
   );
 }
 
+const fmtMins = (m: number) => (m < 90 ? `${m} min` : `${Math.round(m / 6) / 10} h`);
+
 function Metric({
   label,
   value,
@@ -405,6 +437,9 @@ function CampaignLine({ c, score, data }: { c: ClipCampaign; score: number; data
   const left = budgetLeft(c),
     pct = budgetLeftPct(c);
   const pool = c.kind === "pool" ? poolProgress(c, data.clips) : null;
+  const now = new Date();
+  const run = campaignRunway(c, data.campaignSnapshots, now);
+  const pace = c.kind === "pool" ? poolPace(c, data, now) : null;
   return (
     <div className="cf-campaign-line">
       <div>
@@ -419,6 +454,18 @@ function CampaignLine({ c, score, data }: { c: ClipCampaign; score: number; data
           {" · "}
           {c.platforms.map((p) => PLATFORM_LABEL[p]).join(", ") || "platforms not set"}
         </div>
+        {run.burnPerDay != null && (
+          <div className={`cf-small ${run.runwayDays != null && run.runwayDays < 1.5 ? "cf-bad" : "muted"}`}>
+            Burning {fmtUSD(run.burnPerDay)}/day
+            {run.runwayDays != null ? ` · about ${run.runwayDays} days left` : ""}
+          </div>
+        )}
+        {pace && pace.needPerDay != null && (
+          <div className={`cf-small ${pace.onPace === false ? "cf-bad" : "muted"}`}>
+            Needs {fmtNum(pace.needPerDay)} views/day for {pace.daysLeft} days · averaging {fmtNum(pace.avgPerDay)}
+            {pace.onPace === false ? " (off pace)" : ""}
+          </div>
+        )}
         {pct != null && (
           <div className="progress-track" title={`${Math.round(pct * 100)}% of budget left`}>
             <span
@@ -550,6 +597,14 @@ function Review({
             {age != null ? ` · cut ${age < 90 ? `${Math.round(age)} min` : `${Math.round(age / 60)} h`} ago` : ""}
           </span>
           <h2>{clip.title}</h2>
+          {clip.experiment && (
+            <p className="cf-small">
+              <span className="badge neutral">
+                Test: {clip.experiment}
+                {clip.variant ? ` · ${clip.variant}` : ""}
+              </span>
+            </p>
+          )}
           {clip.sourceUrl && (
             <p className="muted cf-small">
               Source:{" "}
@@ -989,6 +1044,8 @@ function AccountCard({
 }) {
   const h = accountHealth(a, data.clips, data.campaigns);
   const e = payoutEligibility(a);
+  const used = postsToday(a, data.clips),
+    cap = dailyCap(a);
   return (
     <button className="card cf-account" onClick={() => edit({ ...a, __existing: true })}>
       <div className="card-header">
@@ -1007,6 +1064,10 @@ function AccountCard({
         <span><strong>{fmtNum(h.median)}</strong><small>median views</small></span>
         <span><strong>{fmtNum(h.best)}</strong><small>best</small></span>
         <span><strong>{fmtUSD(h.earned)}</strong><small>est. net</small></span>
+        <span className={used >= cap ? "cf-bad" : ""}>
+          <strong>{used}/{cap}</strong>
+          <small>posts today</small>
+        </span>
       </div>
       <div className="cf-tags">
         {h.killCandidate && <span className="badge coral">Kill or re-theme</span>}
@@ -1139,6 +1200,18 @@ function Money({
 
 function Formats({ data, launch }: { data: ClipFarmData; launch: boolean }) {
   const rows = formatLeaderboard(data.clips);
+  const projection = fitProjectionK(data);
+  const experiments = experimentResults(data);
+  const liftOf = (format: string) => {
+    const lifts = data.clips
+      .filter((c) => (c.format?.trim() || "Untagged") === format)
+      .map((c) => clipLift(c, data))
+      .filter((x): x is number => x != null)
+      .sort((a, b) => a - b);
+    if (!lifts.length) return null;
+    const m = Math.floor(lifts.length / 2);
+    return lifts.length % 2 ? lifts[m] : (lifts[m - 1] + lifts[m]) / 2;
+  };
   const rejects = REJECT_REASONS.map((r) => ({
     r,
     n: data.clips.filter((c) => c.rejectReason === r).length,
@@ -1162,6 +1235,7 @@ function Formats({ data, launch }: { data: ClipFarmData; launch: boolean }) {
               <th>Clips</th>
               <th>Median views</th>
               <th>Best</th>
+              <th title="24h views over the account's usual 24h views">Lift</th>
             </tr>
           </thead>
           <tbody>
@@ -1173,12 +1247,62 @@ function Formats({ data, launch }: { data: ClipFarmData; launch: boolean }) {
                 <td>{r.clips}</td>
                 <td>{fmtNum(r.median)}</td>
                 <td>{fmtNum(r.best)}</td>
+                <td>{(() => { const l = liftOf(r.format); return l == null ? "—" : `${l.toFixed(2)}×`; })()}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {!rows.length && <Empty title="No posted clips yet" />}
       </div>
+      <SectionTitle eyebrow="One variable at a time" title="Experiments" />
+      <p className="muted cf-small" style={{ marginBottom: 14 }}>
+        The pipeline tags clips with an experiment and a variant. Lift compares each clip&apos;s 24h views with its account&apos;s usual, so big and small accounts count the same. A winner needs {EXPERIMENT_RULE.minPerArm}+ clips per arm and {EXPERIMENT_RULE.minLift}× the runner-up; after {EXPERIMENT_RULE.maxDays} days without one it&apos;s a tie.
+      </p>
+      <div className="cf-list">
+        {experiments.map((x) => (
+          <div key={x.experiment} className="card">
+            <div className="card-header">
+              <h3>{x.experiment}</h3>
+              <span className={`badge ${x.verdict === "winner" ? "success" : "neutral"}`}>
+                {x.verdict === "winner" ? `Winner: ${x.winner}` : x.verdict === "tie" ? "Tie: keep either" : `Running · day ${x.ageDays}`}
+              </span>
+            </div>
+            <table className="ledger-table">
+              <thead>
+                <tr>
+                  <th>Variant</th>
+                  <th>Clips</th>
+                  <th>Median lift</th>
+                </tr>
+              </thead>
+              <tbody>
+                {x.arms.map((arm) => (
+                  <tr key={arm.variant}>
+                    <td>{arm.variant}</td>
+                    <td>
+                      {arm.clips}
+                      {arm.clips < EXPERIMENT_RULE.minPerArm && <span className="muted"> / {EXPERIMENT_RULE.minPerArm}</span>}
+                    </td>
+                    <td>{arm.medianLift.toFixed(2)}×</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+        {!experiments.length && (
+          <Empty title="No experiments yet">
+            When the pipeline sends clips with an experiment and variant (for example “First frame”: Facecam vs Gameplay), results show here.
+          </Empty>
+        )}
+      </div>
+      <p className="muted cf-small" style={{ marginTop: 14 }}>
+        Day-7 projection: 24h views × {projection.k}
+        {projection.fitted
+          ? `, fitted from your last ${projection.n} clips.`
+          : ` (default). It refits from your own clips once ${REFIT_MIN_CLIPS} have day-7 numbers (${projection.n} so far).`}
+        {!data.historyReady && !data.demo && " Run migration 0012 to start keeping stats history."}
+      </p>
       {rejects.length > 0 && (
         <>
           <SectionTitle title="Why you rejected clips" />
@@ -1272,6 +1396,7 @@ function formFields(entity: "campaigns" | "accounts" | "payouts", data: ClipFarm
       { key: "followers", label: "Followers / subscribers", type: "number" },
       { key: "views30d", label: "Views, last 30 days", type: "number", hint: "TikTok payout check" },
       { key: "views90d", label: "Views, last 90 days", type: "number", hint: "YouTube payout check" },
+      { key: "dailyCap", label: "Posts per day cap", type: "number", hint: "Blank uses the default: TikTok 4, Instagram 3, YouTube 3, X 6" },
       { key: "url", label: "Profile link", type: "url" },
       { key: "notes", label: "Notes", type: "textarea" },
     ];

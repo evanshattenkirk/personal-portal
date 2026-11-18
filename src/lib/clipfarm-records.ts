@@ -79,6 +79,7 @@ export const clipSchema: Record<ClipEntity, Record<string, Kind>> = {
     statsAsOf: "ts",
     url: "url",
     notes: "longtext",
+    dailyCap: "int",
     sortOrder: "int",
   },
   clips: {
@@ -110,6 +111,8 @@ export const clipSchema: Record<ClipEntity, Record<string, Kind>> = {
     statsAsOf: "ts",
     createdAt: "ts",
     rejectReason: "text",
+    experiment: "text",
+    variant: "text",
   },
   payouts: {
     id: "text",
@@ -122,6 +125,18 @@ export const clipSchema: Record<ClipEntity, Record<string, Kind>> = {
     note: "longtext",
   },
 };
+
+/** Columns that only exist after migration 0012. Saves retry without them before it runs. */
+export const V11_COLUMNS = ["experiment", "variant", "daily_cap"] as const;
+
+export function withoutV11Columns(row: Record<string, unknown>) {
+  const out = { ...row };
+  for (const c of V11_COLUMNS) delete out[c];
+  return out;
+}
+
+/** Postgres/PostgREST codes for "that column doesn't exist". */
+export const isMissingColumn = (code?: string) => code === "42703" || code === "PGRST204";
 
 const required: Record<ClipEntity, string[]> = {
   campaigns: ["id", "name"],
@@ -272,6 +287,7 @@ export function fromClipRow<K extends ClipEntity>(
 
 // ---------- What the pipeline may change ----------
 
+const CLIP_STATS = ["views", "views24h", "likes", "comments", "shares"] as const;
 const PIPELINE_LOCKED = ["status", "review", "approvedAt", "rejectReason", "submittedAt"] as const;
 
 /**
@@ -296,6 +312,8 @@ export function mergePipelineClip(existing: Clip | null, input: unknown): Clip {
   }
   const patch = validateClipRecord("clips", { ...raw, id: existing.id }, { partial: true });
   const next: Clip = { ...existing, ...patch };
+  // Stats without a time were read just now.
+  if (CLIP_STATS.some((k) => k in raw) && !raw.statsAsOf) next.statsAsOf = new Date().toISOString();
   if (wantsPosted) {
     if (existing.status !== "approved" && existing.status !== "posted")
       throw new Error(`${existing.id} isn't approved, so it can't be marked posted.`);
@@ -317,4 +335,47 @@ export function mergePipelineAccount(existing: ClipAccount, input: unknown): Cli
   for (const k of ACCOUNT_STATS) if (k in raw) picked[k] = raw[k];
   const patch = validateClipRecord("accounts", picked, { partial: true });
   return { ...existing, ...patch, statsAsOf: patch.statsAsOf ?? new Date().toISOString() };
+}
+
+const CAMPAIGN_SCOUT_FIELDS = [
+  "budgetUsed",
+  "budgetTotal",
+  "activeClippers",
+  "budgetCheckedAt",
+  "endsOn",
+  "platforms",
+  "rules",
+] as const;
+
+/**
+ * Merges a campaign the morning scout read from a listing. New campaigns
+ * always start as "watching"; Evan moves them to applied or active himself.
+ * On an existing campaign the scout may refresh only budget, clippers, end
+ * date, platforms and rules.
+ */
+export function mergePipelineCampaign(
+  existing: ClipCampaign | null,
+  input: unknown,
+): ClipCampaign {
+  if (!input || typeof input !== "object" || Array.isArray(input))
+    throw new Error("Each campaign must be an object.");
+  const raw = { ...(input as Record<string, unknown>) };
+  const touchesBudget = "budgetUsed" in raw || "activeClippers" in raw || "budgetTotal" in raw;
+  if (!existing) {
+    delete raw.sortOrder;
+    const created = validateClipRecord("campaigns", { ...raw, status: "watching" });
+    if (touchesBudget && !created.budgetCheckedAt) created.budgetCheckedAt = new Date().toISOString();
+    return created;
+  }
+  const picked: Record<string, unknown> = { id: existing.id };
+  for (const k of CAMPAIGN_SCOUT_FIELDS) if (k in raw) picked[k] = raw[k];
+  const patch = validateClipRecord("campaigns", picked, { partial: true });
+  // A field sent as null clears it, except platforms which stays a list.
+  if (patch.platforms == null) delete (patch as Partial<ClipCampaign>).platforms;
+  const next: ClipCampaign = { ...existing, ...patch };
+  if (touchesBudget && !("budgetCheckedAt" in raw)) next.budgetCheckedAt = new Date().toISOString();
+  const min = next.minPayout, max = next.maxPayout;
+  if (min != null && max != null && min > max)
+    throw new Error("The per-clip minimum can't be above the cap.");
+  return next;
 }

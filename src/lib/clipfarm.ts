@@ -65,6 +65,7 @@ export interface ClipAccount {
   statsAsOf: string | null;
   url: string | null;
   notes: string | null;
+  dailyCap: number | null; // posts per day; null = platform default
   sortOrder: number;
 }
 
@@ -107,6 +108,23 @@ export interface Clip {
   statsAsOf: string | null;
   createdAt: string | null;
   rejectReason: string | null;
+  experiment: string | null; // the one variable this clip tests, e.g. "First frame"
+  variant: string | null; // its arm, e.g. "Facecam"
+}
+
+export interface ClipSnapshot {
+  id: string;
+  clipId: string;
+  capturedAt: string;
+  views: number;
+}
+
+export interface CampaignSnapshot {
+  id: string;
+  campaignId: string;
+  capturedAt: string;
+  budgetUsed: number;
+  activeClippers: number | null;
 }
 
 export type PayoutStatus = "pending" | "hold" | "withdrawable" | "paid";
@@ -128,10 +146,23 @@ export interface ClipFarmData {
   accounts: ClipAccount[];
   clips: Clip[];
   payouts: ClipPayout[];
+  clipSnapshots: ClipSnapshot[];
+  campaignSnapshots: CampaignSnapshot[];
+  historyReady: boolean; // false until migration 0012 has been applied
 }
 
 export function emptyClipFarm(demo = false, ready = true): ClipFarmData {
-  return { demo, ready, campaigns: [], accounts: [], clips: [], payouts: [] };
+  return {
+    demo,
+    ready,
+    campaigns: [],
+    accounts: [],
+    clips: [],
+    payouts: [],
+    clipSnapshots: [],
+    campaignSnapshots: [],
+    historyReady: ready,
+  };
 }
 
 // ---------- Money ----------
@@ -239,28 +270,39 @@ export function campaignFor(clip: Clip, campaigns: ClipCampaign[]) {
   return campaigns.find((c) => c.id === clip.campaignId) ?? null;
 }
 
-export function estimatedEarnings(clip: Clip, campaigns: ClipCampaign[]) {
+export function estimatedEarnings(
+  clip: Clip,
+  campaigns: ClipCampaign[],
+  k = PROJECTION_K,
+) {
   const c = campaignFor(clip, campaigns);
   if (!c || c.kind !== "cpm") return 0;
   if (clip.review === "denied") return 0;
-  return clipPayout(Math.max(clip.views, projected7d(clip)), c);
+  return clipPayout(Math.max(clip.views, projected7d(clip, k)), c);
 }
 
 /** Day-7 view projection from the 24h count. k = 2.5 until there is enough of Evan's own decay data. */
 export const PROJECTION_K = 2.5;
-export function projected7d(clip: Pick<Clip, "views" | "views24h">) {
-  return clip.views24h ? Math.round(clip.views24h * PROJECTION_K) : clip.views;
+export function projected7d(
+  clip: Pick<Clip, "views" | "views24h">,
+  k = PROJECTION_K,
+) {
+  return clip.views24h ? Math.round(clip.views24h * k) : clip.views;
 }
 
 /** Share of submitted CPM clips that cleared the campaign minimum: the best single predictor of income. */
-export function minClearRate(clips: Clip[], campaigns: ClipCampaign[]) {
+export function minClearRate(
+  clips: Clip[],
+  campaigns: ClipCampaign[],
+  k = PROJECTION_K,
+) {
   const judged = clips.filter((x) => {
     const c = campaignFor(x, campaigns);
     return x.status === "submitted" && c?.kind === "cpm" && c.minPayout;
   });
   if (!judged.length) return null;
   const cleared = judged.filter(
-    (x) => Math.max(x.views, projected7d(x)) >= viewsToMinimum(campaignFor(x, campaigns)!),
+    (x) => Math.max(x.views, projected7d(x, k)) >= viewsToMinimum(campaignFor(x, campaigns)!),
   );
   return cleared.length / judged.length;
 }
@@ -310,13 +352,14 @@ export function accountHealth(
   a: ClipAccount,
   clips: Clip[],
   campaigns: ClipCampaign[],
+  k = PROJECTION_K,
 ) {
   const live = clips.filter(
     (c) => c.accountId === a.id && (c.status === "posted" || c.status === "submitted"),
   );
   const views = live.reduce((s, c) => s + c.views, 0);
   const best = live.reduce((m, c) => Math.max(m, c.views), 0);
-  const earned = live.reduce((s, c) => s + estimatedEarnings(c, campaigns), 0);
+  const earned = live.reduce((s, c) => s + estimatedEarnings(c, campaigns, k), 0);
   const median = medianOf(live.map((c) => c.views));
   // A run of the last 5 clips all under 30% of the account's median reads as a reach drop.
   const recent = [...live]
@@ -398,6 +441,15 @@ export function clipFlags(
     flags.push({ level: "warn", text: "Under 60s: TikTok won't pay for it" });
   if (clip.verdict === "warn")
     flags.push({ level: "warn", text: "Checker raised a warning" });
+  if (a && clip.status === "review") {
+    const used = postsToday(a, data.clips),
+      cap = dailyCap(a);
+    if (used >= cap)
+      flags.push({
+        level: "warn",
+        text: `${a.handle} is at its daily cap (${used} of ${cap}). Pick another account or it posts tomorrow`,
+      });
+  }
   return flags;
 }
 
@@ -485,13 +537,32 @@ export function clipAlerts(data: ClipFarmData, now = new Date()): ClipAlert[] {
       });
     if (c.kind === "pool" && c.poolViewsRequired) {
       const p = poolProgress(c, data.clips);
+      const pace = poolPace(c, data, now);
       if (!p.qualified)
         out.push({
-          level: "money",
-          text: `${c.name}: ${fmtNum(p.views)} of ${fmtNum(p.required)} approved views to qualify (${Math.round(p.pct * 100)}%).`,
+          level: pace?.onPace === false ? "urgent" : "money",
+          text:
+            pace?.onPace === false
+              ? `${c.name} is off pace: needs ${fmtNum(pace.needPerDay ?? 0)} approved views a day for ${pace.daysLeft} days, averaging ${fmtNum(pace.avgPerDay)}. Push more clips there or drop it.`
+              : `${c.name}: ${fmtNum(p.views)} of ${fmtNum(p.required)} approved views to qualify (${Math.round(p.pct * 100)}%).`,
           campaignId: c.id,
         });
     }
+    const run = campaignRunway(c, data.campaignSnapshots, now);
+    if (left != null && left > 0 && run.runwayDays != null && run.runwayDays < 1.5)
+      out.push({
+        level: "urgent",
+        text: `${c.name} runs dry in about ${run.runwayDays < 1 ? `${Math.max(1, Math.round(run.runwayDays * 24))} h` : `${run.runwayDays} days`} at ${fmtUSD(run.burnPerDay ?? 0)}/day. Post for it now or not at all.`,
+        campaignId: c.id,
+      });
+    const owed = queuedPayouts(c, data, now);
+    const budget = budgetLeft(c);
+    if (budget != null && budget > 0 && owed > budget)
+      out.push({
+        level: "info",
+        text: `Clips still earning on ${c.name} project ${fmtUSD(owed)}, more than its ${fmtUSD(budget)} left. Some won't be paid: cut for another campaign.`,
+        campaignId: c.id,
+      });
   }
   for (const c of data.campaigns)
     if (c.status === "watching" && c.opensOn && c.opensOn <= addDaysISO(today, 1))
@@ -521,6 +592,17 @@ export function clipAlerts(data: ClipFarmData, now = new Date()): ClipAlert[] {
         accountId: a.id,
       });
   }
+  for (const a of data.accounts) {
+    if (a.status === "killed" || a.status === "paused") continue;
+    const used = postsToday(a, data.clips, now),
+      cap = dailyCap(a);
+    if (used > cap)
+      out.push({
+        level: "info",
+        text: `${a.handle} has ${used} posts today or approved, over its cap of ${cap}. Hold the extras for tomorrow.`,
+        accountId: a.id,
+      });
+  }
   const withdrawable = data.payouts
     .filter((p) => p.status === "withdrawable")
     .reduce((t, p) => t + p.amount, 0);
@@ -532,13 +614,14 @@ export function clipAlerts(data: ClipFarmData, now = new Date()): ClipAlert[] {
 
 /** Money picture: estimated, in hold, withdrawable, paid. */
 export function moneySummary(data: ClipFarmData, now = new Date()) {
+  const k = fitProjectionK(data, now).k;
   let earning = 0,
     hold = 0,
     estimated = 0;
   for (const clip of data.clips) {
     const c = campaignFor(clip, data.campaigns);
     if (!c || c.kind !== "cpm") continue;
-    const amount = estimatedEarnings(clip, data.campaigns);
+    const amount = estimatedEarnings(clip, data.campaigns, k);
     estimated += amount;
     const w = earnWindow(clip, c, now);
     if (w?.phase === "earning") earning += amount;
@@ -582,6 +665,249 @@ export function formatLeaderboard(clips: Clip[]) {
       best: Math.max(...views),
     }))
     .sort((a, b) => b.median - a.median);
+}
+
+// ---------- History: refit, runway, pace ----------
+
+const HOUR = 3.6e6;
+const DAY = 24 * HOUR;
+const isLive = (c: Clip) => c.status === "posted" || c.status === "submitted";
+
+function snapshotsFor(clipId: string, snaps: ClipSnapshot[]) {
+  return snaps
+    .filter((s) => s.clipId === clipId)
+    .sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
+}
+
+/** Views closest to `hours` after posting, from snapshots (within ±25%). */
+export function viewsAt(clip: Clip, snaps: ClipSnapshot[], hours: number) {
+  if (!clip.postedAt) return null;
+  const target = Date.parse(clip.postedAt) + hours * HOUR;
+  let best: ClipSnapshot | null = null;
+  for (const s of snapshotsFor(clip.id, snaps)) {
+    const d = Math.abs(Date.parse(s.capturedAt) - target);
+    if (d <= hours * HOUR * 0.25 && (!best || d < Math.abs(Date.parse(best.capturedAt) - target)))
+      best = s;
+  }
+  return best?.views ?? null;
+}
+
+export const REFIT_MIN_CLIPS = 30;
+
+/**
+ * Day-7 projection multiplier. Starts at 2.5 and switches to the median of
+ * Evan's own day-7 ÷ 24h ratio once 30 clips have both numbers.
+ */
+export function fitProjectionK(
+  data: Pick<ClipFarmData, "clips" | "clipSnapshots">,
+  now = new Date(),
+) {
+  const ratios: number[] = [];
+  for (const c of data.clips) {
+    if (!c.postedAt || now.getTime() - Date.parse(c.postedAt) < 7 * DAY) continue;
+    const v24 = c.views24h ?? viewsAt(c, data.clipSnapshots, 24);
+    const v7 = viewsAt(c, data.clipSnapshots, 168);
+    if (v24 && v24 > 0 && v7 != null && v7 >= v24) ratios.push(v7 / v24);
+  }
+  if (ratios.length < REFIT_MIN_CLIPS)
+    return { k: PROJECTION_K, n: ratios.length, fitted: false };
+  return { k: round2(medianOf(ratios)), n: ratios.length, fitted: true };
+}
+
+/** Budget burn per day from the last ~24–48 h of budget checks, and days left. */
+export function campaignRunway(
+  c: ClipCampaign,
+  snaps: CampaignSnapshot[],
+  now = new Date(),
+) {
+  const left = budgetLeft(c);
+  const mine = snaps
+    .filter((s) => s.campaignId === c.id && now.getTime() - Date.parse(s.capturedAt) <= 2 * DAY)
+    .sort((a, b) => a.capturedAt.localeCompare(b.capturedAt));
+  if (left == null || mine.length < 2) return { burnPerDay: null, runwayDays: null };
+  const first = mine[0],
+    last = mine[mine.length - 1];
+  const days = (Date.parse(last.capturedAt) - Date.parse(first.capturedAt)) / DAY;
+  if (days < 0.25) return { burnPerDay: null, runwayDays: null };
+  const burn = Math.max(0, (last.budgetUsed - first.budgetUsed) / days);
+  return {
+    burnPerDay: round2(burn),
+    runwayDays: burn > 0 ? Math.round((left / burn) * 10) / 10 : null,
+  };
+}
+
+/** Pool pace: views/day still needed by the end date vs the last 3 days' average. */
+export function poolPace(
+  c: ClipCampaign,
+  data: Pick<ClipFarmData, "clips" | "clipSnapshots">,
+  now = new Date(),
+) {
+  const p = poolProgress(c, data.clips);
+  if (c.kind !== "pool" || !c.poolViewsRequired || p.qualified) return null;
+  const daysLeft = c.endsOn ? Math.max(0, dayDiff(c.endsOn, todayISO(now))) : null;
+  const needPerDay = daysLeft ? Math.ceil((p.required - p.views) / daysLeft) : null;
+  const since = now.getTime() - 3 * DAY;
+  let gained = 0;
+  for (const clip of data.clips) {
+    if (clip.campaignId !== c.id || clip.review !== "accepted") continue;
+    const snaps = snapshotsFor(clip.id, data.clipSnapshots);
+    const before = [...snaps].reverse().find((s) => Date.parse(s.capturedAt) <= since);
+    const postedInWindow = clip.postedAt && Date.parse(clip.postedAt) > since;
+    gained += Math.max(0, clip.views - (before?.views ?? (postedInWindow ? 0 : clip.views)));
+  }
+  const avgPerDay = Math.round(gained / 3);
+  return {
+    daysLeft,
+    needPerDay,
+    avgPerDay,
+    onPace: needPerDay == null ? null : avgPerDay >= needPerDay,
+  };
+}
+
+/** Projected payouts of clips still inside a campaign's earn window. */
+export function queuedPayouts(c: ClipCampaign, data: ClipFarmData, now = new Date()) {
+  if (c.kind !== "cpm") return 0;
+  const k = fitProjectionK(data, now).k;
+  let total = 0;
+  for (const clip of data.clips) {
+    if (clip.campaignId !== c.id) continue;
+    if (earnWindow(clip, c, now)?.phase === "earning")
+      total += estimatedEarnings(clip, data.campaigns, k);
+  }
+  return round2(total);
+}
+
+/** Money expected to become withdrawable in the next 7 days, plus what already is. */
+export function cashNext7(data: ClipFarmData, now = new Date()) {
+  const k = fitProjectionK(data, now).k;
+  const horizon = addDaysISO(todayISO(now), 7);
+  let fromClips = 0;
+  for (const clip of data.clips) {
+    const c = campaignFor(clip, data.campaigns);
+    if (!c || c.kind !== "cpm") continue;
+    const w = earnWindow(clip, c, now);
+    if (w && w.phase !== "done" && w.withdrawableOn <= horizon)
+      fromClips += estimatedEarnings(clip, data.campaigns, k);
+  }
+  const fromPayouts = data.payouts
+    .filter(
+      (p) =>
+        p.status === "withdrawable" ||
+        ((p.status === "pending" || p.status === "hold") &&
+          p.availableOn != null &&
+          p.availableOn <= horizon),
+    )
+    .reduce((t, p) => t + p.amount, 0);
+  return round2(fromClips + fromPayouts);
+}
+
+// ---------- Speed ----------
+
+export const SUBMIT_LATE_MIN = 30;
+
+/** Was this clip submitted late (or is it posted and still unsubmitted past the window)? */
+export function isLate(clip: Clip, campaigns: ClipCampaign[], now = new Date()) {
+  const c = campaignFor(clip, campaigns);
+  if (!c || c.kind === "platform" || !clip.postedAt) return false;
+  const end = clip.submittedAt ? Date.parse(clip.submittedAt) : clip.status === "posted" ? now.getTime() : null;
+  return end != null && (end - Date.parse(clip.postedAt)) / 60000 > SUBMIT_LATE_MIN;
+}
+
+/** Launch-week speed: minutes from cut to post, and from post to submission (last 7 days). */
+export function speedStats(data: ClipFarmData, now = new Date()) {
+  const recent = data.clips.filter(
+    (c) => c.postedAt && now.getTime() - Date.parse(c.postedAt) <= 7 * DAY,
+  );
+  const mins = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 60000;
+  const cutToPost = recent
+    .filter((c) => c.createdAt && Date.parse(c.createdAt) <= Date.parse(c.postedAt!))
+    .map((c) => mins(c.createdAt!, c.postedAt!));
+  const submitLag = recent
+    .filter((c) => c.submittedAt)
+    .map((c) => mins(c.postedAt!, c.submittedAt!));
+  const late = recent.filter((c) => isLate(c, data.campaigns, now));
+  return {
+    cutToPostMin: cutToPost.length ? Math.round(medianOf(cutToPost)) : null,
+    submitLagMin: submitLag.length ? Math.round(medianOf(submitLag)) : null,
+    lateCount: late.length,
+    lateIds: late.map((c) => c.id),
+  };
+}
+
+// ---------- Cadence ----------
+
+export const DEFAULT_DAILY_CAP: Record<Platform, number> = {
+  tiktok: 4,
+  instagram: 3,
+  youtube: 3,
+  facebook: 3,
+  x: 6,
+};
+
+export function dailyCap(a: ClipAccount) {
+  return a.dailyCap ?? DEFAULT_DAILY_CAP[a.platform];
+}
+
+/** Posts today (Chicago) plus approved clips still waiting to post on this account. */
+export function postsToday(a: ClipAccount, clips: Clip[], now = new Date()) {
+  const today = todayISO(now);
+  return clips.filter(
+    (c) =>
+      c.accountId === a.id &&
+      (c.status === "approved" || (isLive(c) && c.postedAt && localDate(c.postedAt) === today)),
+  ).length;
+}
+
+// ---------- Experiments ----------
+
+/** A clip's 24h views over its account's median 24h views: removes account-size noise. */
+export function clipLift(clip: Clip, data: Pick<ClipFarmData, "clips" | "clipSnapshots">) {
+  const v = clip.views24h ?? viewsAt(clip, data.clipSnapshots, 24);
+  if (v == null || !clip.accountId) return null;
+  const peers = data.clips
+    .filter((c) => c.accountId === clip.accountId && isLive(c))
+    .map((c) => c.views24h ?? viewsAt(c, data.clipSnapshots, 24))
+    .filter((x): x is number => x != null);
+  const median = medianOf(peers);
+  return median > 0 ? v / median : null;
+}
+
+export const EXPERIMENT_RULE = { minPerArm: 10, minLift: 1.3, maxDays: 14 };
+
+/** Each experiment's arms with median lift, and a call once the rule is met. */
+export function experimentResults(
+  data: Pick<ClipFarmData, "clips" | "clipSnapshots">,
+  now = new Date(),
+) {
+  const byExp = new Map<string, Clip[]>();
+  for (const c of data.clips) {
+    if (!c.experiment?.trim() || !c.variant?.trim() || !isLive(c)) continue;
+    const key = c.experiment.trim();
+    byExp.set(key, [...(byExp.get(key) ?? []), c]);
+  }
+  return [...byExp.entries()].map(([experiment, clips]) => {
+    const arms = new Map<string, number[]>();
+    for (const c of clips) {
+      const lift = clipLift(c, data);
+      if (lift == null) continue;
+      const v = c.variant!.trim();
+      arms.set(v, [...(arms.get(v) ?? []), lift]);
+    }
+    const rows = [...arms.entries()]
+      .map(([variant, lifts]) => ({ variant, clips: lifts.length, medianLift: round2(medianOf(lifts)) }))
+      .sort((a, b) => b.medianLift - a.medianLift);
+    const started = clips.reduce(
+      (m, c) => Math.min(m, Date.parse(c.postedAt ?? c.createdAt ?? now.toISOString())),
+      now.getTime(),
+    );
+    const ageDays = Math.floor((now.getTime() - started) / DAY);
+    const enough = rows.length >= 2 && rows.every((r) => r.clips >= EXPERIMENT_RULE.minPerArm);
+    let verdict: "running" | "winner" | "tie" = "running";
+    if (enough && rows[1].medianLift > 0 && rows[0].medianLift / rows[1].medianLift >= EXPERIMENT_RULE.minLift)
+      verdict = "winner";
+    else if (ageDays >= EXPERIMENT_RULE.maxDays) verdict = "tie";
+    return { experiment, arms: rows, ageDays, verdict, winner: verdict === "winner" ? rows[0].variant : null };
+  });
 }
 
 // ---------- Formatting ----------

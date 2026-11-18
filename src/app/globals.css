@@ -2637,6 +2637,10 @@ button.tray-chip {
 .progress-track span.cf-low {
   background: var(--coral);
 }
+.cf-bad,
+.cf-bad small {
+  color: var(--coral);
+}
 .cf-score {
   text-align: right;
   white-space: nowrap;
@@ -2834,7 +2838,7 @@ kbd {
 }
 .cf-account-nums {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 10px;
   margin: 4px 0 8px;
 }
